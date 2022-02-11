@@ -2,4 +2,5 @@
 
 export(clear_optDiscRD)
 export(set_optDiscRD)
+importFrom(stats,complete.cases)
 importFrom(stats,terms)

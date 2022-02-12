@@ -228,7 +228,10 @@ local_random <- function(
   args <- as.list(match.call())[-1]
 
   # check global options for outcomes
-  if (missing(y)) y <- getOption("discRD.outcome")
+  if (missing(y)) {
+    y <- getOption("discRD.outcome")
+    if (all(y == "")) stop("Specify outcome in argument or global option.")
+  }
   if (missing(suby)) suby <- seq_len(length(y))
   y <- y[suby]
 

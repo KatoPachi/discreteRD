@@ -8,7 +8,8 @@ discrd_tab(...)
 }
 \arguments{
 \item{\dots}{some arguments.
-See \code{\link[=discrd_tab.local_random]{discrd_tab.local_random()}} for arguments of "local_random" class.}
+See \code{\link[=discrd_tab.local_random]{discrd_tab.local_random()}} for arguments of "local_random" class.
+See \code{\link[=discrd_tab.discRD_global_lm]{discrd_tab.discRD_global_lm()}} for arguments of "discRD_global_lm" class.}
 }
 \description{
 Output Table of Empirical Analysis for Discrete RD

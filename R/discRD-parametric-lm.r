@@ -122,17 +122,22 @@ global_lm <- function(
     fullmod <- update(baseline, covariate)
 
     # run lm_robust
-    lm_args <- list(formula = fullmod, data = usedt)
+    lm_args <- list(formula = fullmod, data = usedt$data)
     if (is.null(pass_args_lm$se_type)) pass_args_lm$se_type <- "HC1"
     if (!is.null(pass_args_lm$weight)) {
-      pass_args_lm$weight <- usedt[[pass_args_lm$weight]]
+      pass_args_lm$weight <- usedt$data[[pass_args_lm$weight]]
     }
     lm_args <- append(pass_args_lm, lm_args)
-    do.call("lm_robust", lm_args, envir = getNamespace("estimatr"))
+    est <- do.call("lm_robust", lm_args, envir = getNamespace("estimatr"))
+    est$RD.info <- usedt$RD.info
+    est
   })
 
   # output
-  out <- list(model.frame = mod, res = estimation)
+  out <- list(
+    model.frame = mod,
+    res = estimation
+  )
   class(out) <- append("discRD_global_lm", class(out))
   out
 }

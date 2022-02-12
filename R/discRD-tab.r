@@ -90,6 +90,7 @@ discrd_tab.local_random <- function(
   digits = 3,
   ...
 ) {
+  data <- data$res
   if (!missing(ylab)) {
     outcome <- NULL
     data <- data %>%

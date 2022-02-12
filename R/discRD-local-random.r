@@ -237,9 +237,11 @@ local_random <- function(
 
   # shaping data
   if (missing(w)) {
-    args$data <- shape_data(y, x, cutoff, assign, data)
+    usedt <- shape_data(y, x, cutoff, assign, data)
+    args$data <- usedt$data
   } else {
-    args$data <- shape_data(y, x, cutoff, assign, data, w = w)
+    usedt <- shape_data(y, x, cutoff, assign, data, w = w)
+    args$data <- usedt$data
   }
 
   # run t-test/permutation test
@@ -250,7 +252,10 @@ local_random <- function(
   })
 
   # output
-  out <- dplyr::bind_rows(test)
+  out <- list(
+    res = dplyr::bind_rows(test),
+    RD.info = usedt$RD.info
+  )
   class(out) <- append("local_random", class(out))
   out
 }

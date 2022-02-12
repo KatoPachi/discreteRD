@@ -97,5 +97,8 @@ shape_data <- function(y, x, cutoff, assign, data, ...) {
     stop("Unknown assignment rule is used.")
   }
 
-  usedt
+  list(
+    data = usedt,
+    RD.info = list(cutoff = cutoff, assign = assign)
+  )
 }

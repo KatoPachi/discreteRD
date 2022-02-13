@@ -2,7 +2,7 @@
 #'
 #' @param \dots some arguments.
 #'   See [tabular.local_random_test()] for arguments of "local_random" class.
-#'   See [tabular.discRD_global_lm()]
+#'   See [tabular.global_lm()]
 #'   for arguments of "discRD_global_lm" class.
 #'
 #' @export
@@ -167,7 +167,7 @@ tabular.local_random_test <- function(object,
 
 #' Output Table for Global Local Polynomials
 #'
-#' @param data list with "discRD_global_lm" class
+#' @param object object with "global_lm" class
 #' @param ylab a named string vector of outcome variables
 #' @param dlab a string of label of treatment variable
 #' @param olab a string of label of "Order of polynomial"
@@ -212,7 +212,7 @@ tabular.local_random_test <- function(object,
 #' @importFrom flextable hline_bottom
 #' @importFrom flextable fontsize
 #' @importFrom flextable autofit
-#' @method tabular discRD_global_lm
+#' @method tabular global_lm
 #' @export
 #' @examples
 #' \dontrun{
@@ -235,7 +235,7 @@ tabular.local_random_test <- function(object,
 #' library(magrittr)
 #'
 #' global_lm(data = raw) %>%
-#'   discrd_tab(
+#'   tabular(
 #'     title = "Estimate Local ATE by Global Polynomial Fitting",
 #'     ylab = c("y" = "Simulated Outcome", "bin" = "Simulated Outcome > 0"),
 #'     dlab = "Treatment",
@@ -244,25 +244,27 @@ tabular.local_random_test <- function(object,
 #'   )
 #' }
 #'
-tabular.discRD_global_lm <- function(
-  data, ylab, dlab = "treated", olab = "Order of polynomial",
-  covariate_labs,
-  stars = c("***" = .01, "**" = .05, "*" = .1),
-  title = NULL,
-  footnote = NULL,
-  output = getOption("discRD.table_output"),
-  fontsize = getOption("discRD.table_fontsize"),
-  digits = 3,
-  ...
-) {
+tabular.global_lm <- function(object,
+                              ylab,
+                              dlab = "treated",
+                              olab = "Order of polynomial",
+                              covariate_labs,
+                              stars = c("***" = .01, "**" = .05, "*" = .1),
+                              title = NULL,
+                              footnote = NULL,
+                              output = getOption("discRD.table_output"),
+                              fontsize = getOption("discRD.table_fontsize"),
+                              digits = 3,
+                              ...) {
   # Step 1: Create add_rows tabulation
-  base_addtab <- data.frame(x = unique(unlist(data$model.frame$cov)))
+  xlist <- lapply(object$model.outline$covmod, all.vars)
+  base_addtab <- data.frame(x = unique(unlist(xlist)))
 
   ## which covariates each model includes
-  for (i in seq_len(length(data$model.frame$cov))) {
+  for (i in seq_len(length(xlist))) {
     base_addtab[, i + 1] <- apply(
       as.matrix(base_addtab[, 1], ncol = 1),
-      MARGIN = 1, function(x) sum(data$model.frame[i, ]$cov[[1]] == x)
+      MARGIN = 1, function(x) sum(xlist[[i]] == x)
     )
   }
 
@@ -303,7 +305,7 @@ tabular.discRD_global_lm <- function(
   }
 
   ## add info of polynomial order
-  addtab <- rbind(addtab, c(olab, as.character(data$model.frame$o)))
+  addtab <- rbind(addtab, c(olab, as.character(object$model.outline$order)))
 
   ## add columns
   addtab <- cbind(rep("", nrow(addtab)), addtab)
@@ -312,17 +314,17 @@ tabular.discRD_global_lm <- function(
   ## rename columns
   colnames(addtab) <- c(
     "part", "group", "term",
-    paste("Model", seq_len(length(data$res)))
+    paste("Model", seq_len(length(object$result)))
   )
 
   # Step 2: run {modelsummary} and reshape
   keep_coef <- dlab
-  names(keep_coef) <- "d"
+  names(keep_coef) <- "Local ATE"
 
   tab <- modelsummary::modelsummary(
-    data$res,
+    object$result,
     coef_map = keep_coef,
-    gof_omit = "Std",
+    gof_omit = "se",
     group = outcome + term ~ model,
     stars = stars,
     fmt = digits,

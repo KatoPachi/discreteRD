@@ -9,7 +9,7 @@ tabular(...)
 \arguments{
 \item{\dots}{some arguments.
 See \code{\link[=tabular.local_random_test]{tabular.local_random_test()}} for arguments of "local_random" class.
-See \code{\link[=tabular.discRD_global_lm]{tabular.discRD_global_lm()}}
+See \code{\link[=tabular.global_lm]{tabular.global_lm()}}
 for arguments of "discRD_global_lm" class.}
 }
 \description{

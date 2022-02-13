@@ -5,8 +5,6 @@
 #' @param data data.frame
 #' @param subset subset condition.
 #' @param weights weight variable.
-#' @param na.action how missing values are treated.
-#'   Default is na.omit (imcomplete cases removed).
 #' @param cutoff numeric of cutoff point.
 #'   If missing, search `option("discRD.cutoff")`
 #' @param assign assignment rule of treatment.
@@ -34,7 +32,7 @@
 #' raw <- data.frame(y, bin, running, cov1, cov2, w)
 #'
 #' set_optDiscRD(discRD.cutoff = 50, discRD.assign = "smaller")
-#' a <- new_clean_rd_data(y ~ running + cov1, data = raw2, weights = w)
+#' a <- clean_rd_data(y ~ running + cov1, data = raw, weights = w)
 #' str(a)
 #' }
 #'
@@ -44,7 +42,6 @@ clean_rd_data <- function(basemod,
                           data,
                           subset,
                           weights,
-                          na.action = na.omit,
                           cutoff,
                           assign) {
   ## make formula
@@ -56,13 +53,13 @@ clean_rd_data <- function(basemod,
   ## weight & subset condition vector
   wv <- NULL
   if (!missing(weights)) {
-    weights <- rlang::enquo(weights)
+    if (!rlang::is_call(weights)) weights <- rlang::enquo(weights)
     wv <- rlang::eval_tidy(weights, data)
   }
 
   tfv <- NULL
   if (!missing(subset)) {
-    subset <- rlang::enquo(subset)
+    if (!rlang::is_call(subset)) subset <- rlang::enquo(subset)
     tfv <- rlang::eval_tidy(subset, data)
   }
 
@@ -72,7 +69,7 @@ clean_rd_data <- function(basemod,
     data = data,
     subset = tfv,
     weights = wv,
-    na.action = na.action
+    na.action = na.omit
   )
 
   clean <- do.call("model.frame", args)
@@ -111,4 +108,55 @@ clean_rd_data <- function(basemod,
       assignment = assign
     )
   )
+}
+
+#' Subset by Bandwidth
+#'
+#' @param data list created by `clean_rd_data`.
+#' @param bw numeric vector.
+#'   If one element in the vector,
+#'   we use data satisfying -abs(bw) <= x & x <= abs(bw).
+#'   If missing,
+#'   we use treated data and control data closest to cutoff.
+#' @param global logical.
+#'   Whether do you want to restrict data by bandwidth?
+#'
+data_bwfilter <- function(data,
+                          bw,
+                          global = FALSE) {
+  if (!global) {
+    if (missing(bw)) {
+      if (data$RD.info$assignment == "greater") {
+        lwr <- max(data$data[data$data$d == 0, "x"])
+        upr <- 0
+      } else if (data$RD.info$assignment == "smaller") {
+        lwr <- 0
+        upr <- min(data$data[data$data$d == 0, "x"])
+      }
+    } else {
+      if (length(bw) == 1) {
+        lwr <- -abs(bw)
+        upr <- abs(bw)
+      } else {
+        lwr <- bw[1]
+        upr <- bw[2]
+      }
+    }
+
+    dt <- data$data
+    list(
+      data = dt[lwr <= dt$x & dt$x <= upr, ],
+      bwinfo = list(
+        global = FALSE,
+        bw = c(lwr, upr)
+      )
+    )
+  } else {
+    list(
+      data = data$data,
+      bwinfo = list(
+        global = TRUE
+      )
+    )
+  }
 }

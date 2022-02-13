@@ -4,16 +4,7 @@
 \alias{clean_rd_data}
 \title{Data Shape}
 \usage{
-clean_rd_data(
-  basemod,
-  covmod,
-  data,
-  subset,
-  weights,
-  na.action = na.omit,
-  cutoff,
-  assign
-)
+clean_rd_data(basemod, covmod, data, subset, weights, cutoff, assign)
 }
 \arguments{
 \item{basemod}{baseline formula. \verb{outcome ~ running variable}.}
@@ -25,9 +16,6 @@ clean_rd_data(
 \item{subset}{subset condition.}
 
 \item{weights}{weight variable.}
-
-\item{na.action}{how missing values are treated.
-Default is na.omit (imcomplete cases removed).}
 
 \item{cutoff}{numeric of cutoff point.
 If missing, search \code{option("discRD.cutoff")}}
@@ -54,7 +42,7 @@ w <- sample(c(1, 0.5), size = 1000, replace = TRUE)
 raw <- data.frame(y, bin, running, cov1, cov2, w)
 
 set_optDiscRD(discRD.cutoff = 50, discRD.assign = "smaller")
-a <- new_clean_rd_data(y ~ running + cov1, data = raw2, weights = w)
+a <- clean_rd_data(y ~ running + cov1, data = raw, weights = w)
 str(a)
 }
 

@@ -1,18 +1,19 @@
 #' Output Table of Empirical Analysis for Discrete RD
 #'
 #' @param \dots some arguments.
-#'   See [discrd_tab.local_random()] for arguments of "local_random" class.
-#'   See [discrd_tab.discRD_global_lm()] for arguments of "discRD_global_lm" class.
+#'   See [tabular.local_random_test()] for arguments of "local_random" class.
+#'   See [tabular.discRD_global_lm()]
+#'   for arguments of "discRD_global_lm" class.
 #'
 #' @export
-#' 
-discrd_tab <- function(...) {
-  UseMethod("discrd_tab")
+#'
+tabular <- function(...) {
+  UseMethod("tabular")
 }
 
 #' Output Table for Local Random Approach
 #'
-#' @param data data.frame with "local_random" class
+#' @param object object with "local_random_test" class
 #' @param ylab string vector with outcome labels.
 #'   Specify c("original label" = "new label", ...)
 #' @param outcome_lab string of label of outcome column.
@@ -29,13 +30,14 @@ discrd_tab <- function(...) {
 #' @param footnote string of footnote
 #' @param output string of output format
 #'   (default is getOption("discRD.table_output"))
-#' @param fontsize numeric of font size
+#' @param size numeric of font size
 #'   (default is getOption("discRD.table_fontsize"))
 #' @param digits numeric of number of decimal places to display
 #'   (Default is 3).
 #' @param \dots Other arguments to pass to `kableExtra::kable_styling`
 #'
 #' @importFrom magrittr %>%
+#' @importFrom dplyr bind_rows
 #' @importFrom dplyr mutate
 #' @importFrom dplyr recode
 #' @importFrom modelsummary datasummary
@@ -46,7 +48,7 @@ discrd_tab <- function(...) {
 #' @importFrom flextable add_footer_lines
 #' @importFrom flextable add_header_row
 #' @importFrom flextable fontsize
-#' @method discrd_tab local_random
+#' @method tabular local_random_test
 #' @export
 #'
 #' @examples
@@ -74,23 +76,42 @@ discrd_tab <- function(...) {
 #'   "if the running variable is 50 or less."
 #' )
 #'
-#' local_random(data = raw, bw = c(-5, 5)) %>%
-#'   discrd_tab(ylab, digits = 2, footnote = footnote)
+#' local_random_test(data = raw, bw = c(-5, 5)) %>%
+#'   tabular(ylab, digits = 2, footnote = footnote)
 #'
-discrd_tab.local_random <- function(
-  data, ylab,
-  outcome_lab = "Outcomes",
-  meanlab = "Mean", selab = "S.E.", nlab = "N",
-  meandiff_lab = "Mean difference", plab = "P-value",
-  treat_header = "Treated", control_header = "Control",
-  title = NULL,
-  footnote = NULL,
-  output = getOption("discRD.table_output"),
-  fontsize = getOption("discRD.table_fontsize"),
-  digits = 3,
-  ...
-) {
-  data <- data$res
+tabular.local_random_test <- function(object,
+                                      ylab,
+                                      outcome_lab = "Outcomes",
+                                      meanlab = "Mean",
+                                      selab = "S.E.",
+                                      nlab = "N",
+                                      meandiff_lab = "Mean difference",
+                                      plab = "P-value",
+                                      treat_header = "Treated",
+                                      control_header = "Control",
+                                      title = NULL,
+                                      footnote = NULL,
+                                      output = getOption("discRD.table_output"),
+                                      size = getOption("discRD.table_fontsize"),
+                                      digits = 3,
+                                      ...) {
+  res <- object$estimate
+  data <- lapply(res, function(l) {
+    data.frame(
+      outcome = l$outcome,
+      mean_y1 = l$observe$treat$mean,
+      se_y1 = l$observe$treat$se,
+      n1 = l$observe$treat$N,
+      mean_y0 = l$observe$control$mean,
+      se_y0 = l$observe$control$se,
+      n0 = l$observe$control$N,
+      mean_diff = l$local.ate$estimate,
+      p = l$local.ate$p.value
+    )
+  })
+
+  data <- dplyr::bind_rows(data)
+
   if (!missing(ylab)) {
     outcome <- NULL
     data <- data %>%
@@ -102,14 +123,14 @@ discrd_tab.local_random <- function(
   rawvalue <- function(x) x
   tab <- modelsummary::datasummary(
     (Heading(outcome_lab, character.only = TRUE) * outcome) ~ rawvalue * (
+      (Heading(nlab, character.only = TRUE) * n1 * Format(digits = 0)) +
       (Heading(meanlab, character.only = TRUE) * mean_y1) +
-        (Heading(selab, character.only = TRUE) * se_y1) +
-        (Heading(nlab, character.only = TRUE) * n1 * Format(digits = 0)) +
-        (Heading(meanlab, character.only = TRUE) * mean_y0) +
-        (Heading(selab, character.only = TRUE) * se_y0) +
-        (Heading(nlab, character.only = TRUE) * n0 * Format(digits = 0)) +
-        (Heading(meandiff_lab, character.only = TRUE) * mean_diff) +
-        (Heading(plab, character.only = TRUE) * p)
+      (Heading(selab, character.only = TRUE) * se_y1) +
+      (Heading(nlab, character.only = TRUE) * n0 * Format(digits = 0)) +
+      (Heading(meanlab, character.only = TRUE) * mean_y0) +
+      (Heading(selab, character.only = TRUE) * se_y0) +
+      (Heading(meandiff_lab, character.only = TRUE) * mean_diff) +
+      (Heading(plab, character.only = TRUE) * p)
     ),
     data = data,
     align = "lcccccccc",
@@ -123,7 +144,7 @@ discrd_tab.local_random <- function(
 
   if (output == "kableExtra") {
     tab %>%
-      kableExtra::kable_styling(font_size = fontsize, ...) %>%
+      kableExtra::kable_styling(font_size = size, ...) %>%
       kableExtra::add_header_above(head_length) %>%
       kableExtra::footnote(
         general_title = "",
@@ -138,7 +159,7 @@ discrd_tab.local_random <- function(
         values = parse_header$values,
         colwidths = parse_header$lengths
       ) %>%
-      flextable::fontsize(size = fontsize, part = "all")
+      flextable::fontsize(size = size, part = "all")
   } else {
     tab
   }
@@ -191,9 +212,10 @@ discrd_tab.local_random <- function(
 #' @importFrom flextable hline_bottom
 #' @importFrom flextable fontsize
 #' @importFrom flextable autofit
-#' @method discrd_tab discRD_global_lm
+#' @method tabular discRD_global_lm
 #' @export
 #' @examples
+#' \dontrun{
 #' running <- sample(1:100, size = 1000, replace = TRUE)
 #' cov1 <- rnorm(1000, sd = 2); cov2 <- rnorm(1000, mean = -1)
 #' y0 <- running + cov1 + cov2 + rnorm(1000, sd = 10)
@@ -220,9 +242,9 @@ discrd_tab.local_random <- function(
 #'     covariate_labs = list("Covariates" = c("cov1", "cov2")),
 #'     footnote = "***: p < 0.01, **: p < 0.05, *: p < 0.1"
 #'   )
+#' }
 #'
-#'
-discrd_tab.discRD_global_lm <- function(
+tabular.discRD_global_lm <- function(
   data, ylab, dlab = "treated", olab = "Order of polynomial",
   covariate_labs,
   stars = c("***" = .01, "**" = .05, "*" = .1),

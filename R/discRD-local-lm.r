@@ -1,21 +1,15 @@
-#' Global Linear Least Squares to Estimate Local ATE
+#' Local Linear Regression to Estimate Local ATE
 #'
 #' @description Estimate the local ATE
 #'   at the treatment assignment threshold
-#'   by the global least squares method.
+#'   by the local linear regression.
 #'
 #' @param basemod baseline formula. `outcome ~ running variable`.
-#' @param covmod (list of) one-sided formula with
-#'   covariates on rhs.
-#'   If NULL, covariates are not controlled.
-#'   If missing, find `options("discRD.xmod")`
 #' @param data data.frame which you want to use.
 #' @param weights weight variable.
 #' @param subset subset condition.
 #' @param submod numeric vector.
 #'   Which baseline model you want to use.
-#' @param onlydmod logical (default is TRUE).
-#'   Whether to estimate a model without covariates.
 #' @param order numeric vector of global polynomial orders.
 #' @param cutoff numeric of cutoff points
 #'   If missing, try to find `getOption("discRD.cutoff")`.
@@ -29,6 +23,10 @@
 #'   When solving normal equation, use cholesky decomposition.
 #' @param hc character.
 #'   Calculate robust variance-covariance matrix ("HC0" or "HC1")
+#' @param bw bandwidth.
+#' @param kernel character of kernel density ("uniform" or "triangular")
+#' @param point value of the running variable that
+#'   the kernel weights weigh the most
 #'
 #' @details \dots can pass lm_robust arguments
 #'   and some data formatting arguments.
@@ -67,24 +65,27 @@
 #'   discRD.assign = "smaller"
 #' )
 #'
-#' est <- global_lm(data = raw)
-#' str(global_lm(submod = 1, data = raw))
-#' str(global_lm(submod = 1, order = 3, data = raw))
-#' str(global_lm(data = raw, cutoff = 30))
-#' est2 <- global_lm(data = raw, hc = "HC1", weights = w)
+#' est <- local_lm(data = raw, bw = 3, kernel = "uniform")
+#' str(local_lm(submod = 1, data = raw, bw = 3, kernel = "uniform"))
+#' str(local_lm(submod = 1, order = 3, data = raw, bw = 3, kernel = "uniform"))
+#' str(local_lm(data = raw, cutoff = 30, bw = 3, kernel = "uniform"))
+#' est2 <- local_lm(
+#' data = raw, hc = "HC1", weights = w, bw = 3, kernel = "uniform"
+#' )
 #'
-global_lm <- function(basemod,
-                      covmod,
-                      data,
-                      weights,
-                      subset,
-                      submod,
-                      onlydmod = TRUE,
-                      order = c(1, 2),
-                      cutoff,
-                      assign,
-                      cholesky = TRUE,
-                      hc = "HC0") {
+local_lm <- function(basemod,
+                     data,
+                     weights,
+                     subset,
+                     submod,
+                     order = c(1, 2),
+                     cutoff,
+                     assign,
+                     cholesky = TRUE,
+                     hc = "HC0",
+                     bw,
+                     kernel,
+                     point = 0) {
   # collect arguments
   arg <- as.list(match.call())[-1]
   arg$data <- data
@@ -94,15 +95,11 @@ global_lm <- function(basemod,
   if (!is.list(basemod)) basemod <- list(basemod)
   if (length(basemod) == 0) stop("Not find basemod")
 
-  if (missing(covmod)) covmod <- getOption("discRD.covmod")
-  if (!is.list(covmod)) covmod <- list(covmod)
-  if (onlydmod) covmod <- append(list(""), covmod)
-
   # model list
   if (missing(submod)) submod <- seq_len(length(basemod))
   usemod <- basemod[submod]
 
-  mod <- expand.grid(basemod = usemod, covmod = covmod, order = order)
+  mod <- expand.grid(basemod = usemod, order = order)
   mod <- mod[!duplicated(mod), ]
   if (nrow(mod) == 0) stop("Cannot construct model")
 
@@ -112,8 +109,6 @@ global_lm <- function(basemod,
 
   clean <- lapply(seq_len(nrow(mod)), function(i) {
     dtarg$basemod <- mod[i, "basemod"][[1]]
-    coveq <- mod[i, "covmod"][[1]]
-    if (coveq != "") dtarg$covmod <- coveq
     do.call("clean_rd_data", dtarg)
   })
 
@@ -131,6 +126,18 @@ global_lm <- function(basemod,
     dt
   })
 
+  # kernel weight
+  estdt <- lapply(estdt, function(dt) {
+    u <- abs(dt$x - point) / bw
+    kw <- switch(kernel,
+      "triangular" = ifelse(u <= 1, (1 - u), 0),
+      "uniform" = ifelse(u <= 1, 1 / 2, 0)
+    )
+    if (is.null(dt$"(weights)")) dt$"(weights)" <- 1
+    dt$"(weights)" <- dt$"(weights)" * kw
+    dt
+  })
+
   # estimation in treated and control
   estarg_name <- c("cholesky", "hc")
   estarg <- arg[names(arg) %in% estarg_name]
@@ -142,14 +149,14 @@ global_lm <- function(basemod,
 
     # variables
     yvar <- rlang::f_lhs(mod[i, "basemod"][[1]])
-    exclude_x <- c(as.character(yvar), "(weights)", "d")
+    exclude_x <- c(as.character(yvar), "(weights)", "d", "kw")
 
     # estimation in treated data
     estarg$y <- rlang::eval_tidy(yvar, d1)
     design <- as.matrix(d1[, !(names(d1) %in% exclude_x)])
     colnames(design) <- names(d1)[!(names(d1) %in% exclude_x)]
     estarg$x <- design
-    if (!is.null(d1$"(weights)")) estarg$w <- d1$"(weights)"
+    estarg$w <- d1$"(weights)"
     treat <- do.call("lm_internal", estarg)
 
     # estimation in control data
@@ -157,7 +164,7 @@ global_lm <- function(basemod,
     design <- as.matrix(d0[, !(names(d0) %in% exclude_x)])
     colnames(design) <- names(d0)[!(names(d0) %in% exclude_x)]
     estarg$x <- design
-    if (!is.null(d0$"(weights)")) estarg$w <- d0$"(weights)"
+    estarg$w <- d0$"(weights)"
     ctrl <- do.call("lm_internal", estarg)
 
     # local ATE
@@ -173,9 +180,15 @@ global_lm <- function(basemod,
       outcome = as.character(yvar),
       treat = treat,
       control = ctrl,
-      local.ate = ate_mat
+      local.ate = ate_mat,
+      method = list(
+        kernel = kernel,
+        bandwidth = bw,
+        effective.nobs = nrow(d1[d1$"(weights)" > 0, ]) +
+          nrow(d0[d0$"(weights)" > 0, ])
+      )
     )
-    class(estlist) <- "local_ate_global_lm"
+    class(estlist) <- "local_ate_local_lm"
     estlist
   })
 
@@ -184,6 +197,6 @@ global_lm <- function(basemod,
   output$RD.info <- clean[[1]]$RD.info
   output$model.outline <- mod
   output$result <- est
-  class(output) <- append("global_lm", class(output))
+  class(output) <- append("local_lm", class(output))
   output
 }

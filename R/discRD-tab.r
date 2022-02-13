@@ -449,3 +449,232 @@ tabular.global_lm <- function(object,
 
   }
 }
+
+#' Output Table for Local Polynomials
+#'
+#' @param object object with "global_lm" class
+#' @param ylab a named string vector of outcome variables
+#' @param dlab a string of label of treatment variable
+#' @param olab a string of label of "Order of polynomial"
+#' @param stars a named numeric vector to indicate statistical significance.
+#'   `"***" = 0.01` means show *** if p-value is less than or equal to 0.01.
+#' @param title a string of title
+#' @param footnote a string of footnote
+#' @param output a string of output format.
+#'   If missing, find `options("discRD.table_output")`.
+#' @param fontsize numeric of font size.
+#'   If missing, find `options("discRD.table_fontsize")`.
+#' @param digits numeric.
+#'   the number of digits to keep after the period.
+#' @param \dots Other arguments to pass to `kableExtra::kable_styling`
+#'
+#' @importFrom magrittr %>%
+#' @importFrom modelsummary modelsummary
+#' @importFrom knitr kable
+#' @importFrom kableExtra kable_styling
+#' @importFrom kableExtra pack_rows
+#' @importFrom kableExtra footnote
+#' @importFrom dplyr mutate
+#' @importFrom dplyr recode
+#' @importFrom flextable as_grouped_data
+#' @importFrom flextable as_flextable
+#' @importFrom flextable set_header_labels
+#' @importFrom flextable set_caption
+#' @importFrom flextable add_footer_row
+#' @importFrom flextable align
+#' @importFrom flextable border_remove
+#' @importFrom flextable hline_top
+#' @importFrom officer fp_border
+#' @importFrom flextable hline_bottom
+#' @importFrom flextable fontsize
+#' @importFrom flextable autofit
+#' @method tabular local_lm
+#' @export
+#' @examples
+#' \dontrun{
+#' running <- sample(1:100, size = 1000, replace = TRUE)
+#' cov1 <- rnorm(1000, sd = 2); cov2 <- rnorm(1000, mean = -1)
+#' y0 <- running + cov1 + cov2 + rnorm(1000, sd = 10)
+#' y1 <- 2 + 1.5 * running + cov1 + cov2 + rnorm(1000, sd = 10)
+#' y <- ifelse(running <= 50, y1, y0)
+#' bin <- ifelse(y > mean(y), 1, 0)
+#' w <- sample(c(1, 0.5), size = 1000, replace = TRUE)
+#' raw <- data.frame(y, bin, running, cov1, cov2, w)
+#'
+#' set_optDiscRD(
+#'   y + bin ~ running,
+#'   xmod = ~ cov1 + cov2,
+#'   discRD.cutoff = 50,
+#'   discRD.assign = "smaller"
+#' )
+#'
+#' library(magrittr)
+#'
+#' local_lm(data = raw) %>%
+#'   tabular(
+#'     title = "Estimate Local ATE by Local Polynomial Fitting",
+#'     ylab = c("y" = "Simulated Outcome", "bin" = "Simulated Outcome > 0"),
+#'     dlab = "Treatment",
+#'     covariate_labs = list("Covariates" = c("cov1", "cov2")),
+#'     footnote = "***: p < 0.01, **: p < 0.05, *: p < 0.1"
+#'   )
+#' }
+#'
+tabular.local_lm <- function(object,
+                              ylab,
+                              dlab = "treated",
+                              olab = "Order of polynomial",
+                              stars = c("***" = .01, "**" = .05, "*" = .1),
+                              title = NULL,
+                              footnote = NULL,
+                              output = getOption("discRD.table_output"),
+                              fontsize = getOption("discRD.table_fontsize"),
+                              digits = 3,
+                              ...) {
+  # Step 1: Create add_rows tabulation
+  addtab <- data.frame(
+    t(c(olab, as.character(object$model.outline$order)))
+  )
+
+  ## add columns
+  addtab <- cbind(rep("", nrow(addtab)), addtab)
+  addtab <- cbind(rep("add_rows", nrow(addtab)), addtab)
+
+  ## rename columns
+  colnames(addtab) <- c(
+    "part", "group", "term",
+    paste("Model", seq_len(length(object$result)))
+  )
+
+  # Step 2: run {modelsummary} and reshape
+  keep_coef <- dlab
+  names(keep_coef) <- "Local ATE"
+
+  tab <- modelsummary::modelsummary(
+    object$result,
+    coef_map = keep_coef,
+    gof_omit = "se",
+    group = outcome + term ~ model,
+    stars = stars,
+    fmt = digits,
+    output = "data.frame"
+  )
+
+  ## Add rows
+  tab <- tab[tab$term != "R2", ]
+  tab$term <- ifelse(tab$statistic == "modelsummary_tmp2", "", tab$term)
+  tab <- tab[, -4]
+  tab <- dplyr::bind_rows(tab, addtab)
+
+  ## Separate tables by group
+  group_id <- if (missing(ylab)) {
+    unique(tab[tab$part == "estimates", "group"])
+  } else {
+    names(ylab)
+  }
+
+  group <- NULL
+  septab <- lapply(group_id, function(x) {
+    estimates <- tab[tab$group == x, ]
+    keep <- apply(estimates, MARGIN = 2, function(x) any(x != ""))
+    append_tab <- dplyr::bind_rows(
+      estimates[, keep],
+      tab[tab$part != "estimates", keep]
+    )
+    append_tab$group <- x
+    append_tab <- append_tab[, -1]
+    colnames(append_tab) <- c(
+      "group", "term", paste0("Model", seq_len(ncol(append_tab) - 2))
+    )
+    append_tab
+  })
+
+  ## append seprated tab
+  tab <- dplyr::bind_rows(septab)
+
+  # Step 3: kebleExtra and flextable format
+  if (output == "kableExtra") {
+    ktab <- knitr::kable(
+      tab[, -1],
+      caption = title,
+      align = paste0(c("l", rep("c", ncol(tab) - 2))),
+      col.names = c("", paste0("(", seq_len(ncol(tab) - 2), ")")),
+      booktabs = TRUE, linesep = "", escape = FALSE,
+    )
+
+    ktab <- kableExtra::kable_styling(ktab, font_size = fontsize, ...)
+
+    for (i in group_id) {
+      numrow <- seq_len(nrow(tab))
+      start_line <- min(numrow[tab$group == i])
+      end_line <- max(numrow[tab$group == i])
+      lab_line <- if (missing(ylab)) i else ylab[i]
+      ktab <- kableExtra::pack_rows(ktab, lab_line, start_line, end_line)
+    }
+
+    ktab %>%
+      kableExtra::footnote(
+        general_title = "",
+        general = footnote,
+        threeparttable = TRUE,
+        escape = FALSE
+      )
+
+  } else if (output == "flextable") {
+
+    if (!missing(ylab)) {
+      ftab <- tab %>%
+        dplyr::mutate(group = dplyr::recode(group, !!!ylab))
+    } else {
+      ftab <- tab
+    }
+
+    header_labs <- vector("list", ncol(tab))
+    names(header_labs) <- colnames(tab)
+    header_labs$term <- ""
+    for (i in seq_len(length(header_labs) - 2)) {
+      header_labs[[i + 2]] <- paste0("(", i, ")")
+    }
+
+    ftab <- ftab %>%
+      flextable::as_grouped_data(groups = "group") %>%
+      flextable::as_flextable(hide_grouplabel = TRUE) %>%
+      flextable::set_header_labels(values = header_labs)
+
+    if (!is.null(title)) {
+      ftab <- ftab %>% flextable::set_caption(title)
+    }
+
+    if (!is.null(footnote)) {
+      ftab <- ftab %>% flextable::add_footer_row(
+        values = footnote,
+        colwidths = ncol(tab) - 1
+      )
+    }
+
+    ftab %>%
+      flextable::align(
+        j = seq(2, 1 + ncol(tab) - 2), align = "center",
+        part = "all"
+      ) %>%
+      flextable::border_remove() %>%
+      flextable::hline_top(part = "all", border = officer::fp_border()) %>%
+      flextable::hline_bottom(
+        part = "header", border = officer::fp_border()
+      ) %>%
+      flextable::hline_bottom(
+        part = "body", border = officer::fp_border()
+      ) %>%
+      flextable::fontsize(size = fontsize, part = "all") %>%
+      flextable::autofit()
+
+  } else {
+
+    if (!missing(ylab)) {
+      tab %>% dplyr::mutate(group = dplyr::recode(group, !!!ylab))
+    } else {
+      tab
+    }
+
+  }
+}

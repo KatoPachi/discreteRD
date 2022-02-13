@@ -2,12 +2,21 @@
 % Please edit documentation in R/broom-methods.r
 \name{tidy.local_ate_global_lm}
 \alias{tidy.local_ate_global_lm}
+\alias{tidy.local_ate_local_lm}
+\alias{glance.local_ate_global_lm}
+\alias{glance.local_ate_local_lm}
 \title{Methods of tidy and glance}
 \usage{
 \method{tidy}{local_ate_global_lm}(x, ...)
+
+\method{tidy}{local_ate_local_lm}(x, ...)
+
+\method{glance}{local_ate_global_lm}(x, ...)
+
+\method{glance}{local_ate_local_lm}(x, ...)
 }
 \arguments{
-\item{x}{object with local_ate_global_lm class}
+\item{x}{object}
 
 \item{\dots}{other arguments}
 }

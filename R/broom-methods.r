@@ -1,6 +1,6 @@
 #' Methods of tidy and glance
 #'
-#' @param x object with local_ate_global_lm class
+#' @param x object
 #' @param \dots other arguments
 #'
 #' @importFrom generics tidy
@@ -20,12 +20,35 @@ tidy.local_ate_global_lm <- function(x, ...) {
 }
 
 #'
+#' @method tidy local_ate_local_lm
+#' @export
+#' @name tidy.local_ate_global_lm
+tidy.local_ate_local_lm <- function(x, ...) {
+  tidy.local_ate_global_lm(x, ...)
+}
+
+#'
 #' @importFrom generics glance
 #' @method glance local_ate_global_lm
 #' @export
+#' @name tidy.local_ate_global_lm
 glance.local_ate_global_lm <- function(x, ...) {
   data.frame(
     nobs = x$treat$N + x$control$N,
     se = x$treat$se.type
+  )
+}
+
+#'
+#' @method glance local_ate_local_lm
+#' @export
+#' @name tidy.local_ate_global_lm
+glance.local_ate_local_lm <- function(x, ...) {
+  data.frame(
+    nobs = x$treat$N + x$control$N,
+    "Effective Num.Obs." = x$method$effective.nobs,
+    se = x$treat$se.type,
+    kernel = x$method$kernel,
+    bandwidth = x$method$bandwidth
   )
 }

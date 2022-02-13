@@ -14,16 +14,14 @@ What the package does (one paragraph).
 discreteRD provides the following \code{\link[=options]{options()}}
 to facilitate consistent analysis:
 \itemize{
-\item \code{discRD.outcome}: a string vector with outcome variables.
-\item \code{discRD.running}: a string of running variable.
+\item \code{discRD.basemod}: a list of formula with \code{outcome ~ running}.
 \item \code{discRD.cutoff}: a numeric value of cutoff point.
 \item \code{discRD.assign}: a string of assignment rule.
 If "greater", treatment is determined by 1*(running >= cutoff).
 If "smaller", treatment is determined by 1*(running <= cutoff).
-\item \code{discRD.xmod}: A list of one-sided formulas with covariates
-on the right-hand side of the equation.
-See \code{rct_lm()} in detail.
-\item \code{discRD.xlist}: String vector with covariates.
+\item \code{discRD.covmod}: A list of one-sided formulas with covariates
+on the right-hand side of the equation
+\item \code{discRD.unique.covariate}: String vector with unique covariates.
 \item \code{discRD.plot_family}: The name of the font family
 used to output the figure with {ggplot2}.
 \item \code{discRD.table_output}: String of output format with {modelsummary}.

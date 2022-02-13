@@ -2,24 +2,39 @@
 % Please edit documentation in R/optDiscRD.r
 \name{set_optDiscRD}
 \alias{set_optDiscRD}
+\alias{clear_optDiscRD}
 \title{Manipulation Global Options for {discRD}}
 \usage{
-set_optDiscRD(basicmod, xmod, ...)
+set_optDiscRD(basemod, covmod, ...)
+
+clear_optDiscRD()
 }
 \arguments{
-\item{basicmod}{two-sided formula with
+\item{basemod}{two-sided formula with
 outcome variables on lhs and running variable on rhs}
 
-\item{xmod}{(list of) one-sided formulas with
+\item{covmod}{(list of) one-sided formulas with
 covariates used in regression analysis on rhs.}
 
-\item{\dots}{Specify \code{option_name = option}}
+\item{\dots}{Other global options as follows: \itemize{
+\item \code{discRD.cutoff}: a numeric value of cutoff point.
+\item \code{discRD.assign}: a string of assignment rule.
+If "greater", treatment is determined by 1*(running >= cutoff).
+If "smaller", treatment is determined by 1*(running <= cutoff).
+\item \code{discRD.plot_family}: The name of the font family
+used to output the figure with {ggplot2}.
+\item \code{discRD.table_output}: String of output format with {modelsummary}.
+Default is "kableExtra".
+\item \code{discRD.table_fontsize}: The font size in the table
+output by {kableExtra} and {flextable} used through {modelsummary}.
+}}
 }
 \description{
 Manipulation Global Options for {discRD}
 }
 \details{
-If empty arguments, return current options.
+If \code{set_optDiscRD} passes empty arguments, return current options.
+\code{clear_optDiscRD} reset the global option value to the initial one.
 }
 \examples{
 \dontrun{

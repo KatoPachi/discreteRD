@@ -21,63 +21,120 @@
 lm_internal <- function(y,
                         x,
                         w,
-                        cholesky = TRUE,
-                        hc = "HC0") {
+                        se_type = "HC0",
+                        cluster,
+                        cholesky = TRUE) {
   # check matrix
   if (!is.matrix(y)) y <- matrix(y, ncol = 1)
   if (!is.matrix(x)) x <- as.matrix(x)
   x <- cbind("(Intercept)" = 1, x)
   if (nrow(y) != nrow(x)) stop("different number of rows x and y")
-  wv <- if (missing(w)) rep(1, nrow(x)) else w
-  w <- diag(wv)
+  if (missing(w)) w <- rep(1, nrow(x))
+  omega <- diag(w)
 
-  # solve normal equation
+  # output list
+  output <- list()
+  output$input$response <- y
+  output$input$design <- x
+  output$input$weights <- w
+
+  # observation and degree of freedom
+  n <- nrow(x)
+  df <- nrow(x) - ncol(x)
+
+  output$N <- n
+  output$df <- df
+
+  ##########################################################################
+  # **solve normal equation**
+  # Note: When using cholesky decomposition, there is another way to solve
+  # 1. run `forwardsolve(t(cholesky), t(x) %*% w %*% y)`
+  # 2. use its return value (ghat) and run `backsolve(cholesky, ghat)`
+  ##########################################################################
+
   if (cholesky) {
-    cholesky <- chol(t(x) %*% w %*% x)
-    p <- solve(cholesky) %*% t(solve(cholesky)) %*% t(x) %*% w
-    # ghat <- forwardsolve(t(cholesky), t(x) %*% w %*% y)
-    # coef <- backsolve(cholesky, ghat)
+    cholesky <- chol(t(x) %*% omega %*% x)
+    xx <- solve(cholesky) %*% t(solve(cholesky))
   } else {
-    p <- solve(t(x) %*% w %*% x) %*% t(x) %*% w
+    xx <- solve(t(x) %*% omega %*% x)
   }
+
+  p <- xx %*% t(x) %*% omega
   b <- p %*% y
 
-  # predictions and residuals
-  yhat <- x %*% b
-  ehat <- y - yhat
+  # predictions, residuals, and residual std.err.
+  proj <- x %*% p
+  yh <- proj %*% y
+  eh <- y - yh
+
+  yh <- c(yh)
+  eh <- c(eh)
+
+  s2 <- sum(eh ^ 2) / df
+
+  output$yhat <- yh
+  output$ehat <- eh
+  output$resid.std.err <- s2
 
   # variance-covariance matrix
-  df <- switch(
-    hc,
-    "HC0" = 1,
-    "HC1" = nrow(x) / (nrow(x) - nrow(x))
-  )
+  if (missing(cluster)) {
+    ## quotation
+    standard <- rlang::quo(s2 * xx)
+    hce <- rlang::quo(p %*% sigma %*% t(p))
 
-  vcov <- p %*% (diag(c(ehat^2)) * df) %*% t(p)
-  se <- sqrt(diag(vcov))
+    ## component of hce
+    ## reference: https://economics.mit.edu/files/7422
+    h <- diag(proj)
+    util <- eh / (1 - h)
+    mutil <- matrix(util, ncol = 1)
+    sigma <- switch(se_type,
+      "HC0" = diag(eh^2),
+      "HC1" = diag(eh^2) * (n / df),
+      "HC2" = diag(eh^2 / (1 - h)),
+      "HCj" = (diag(util^2) - mutil %*% t(mutil) / n) * (n - 1) / n,
+      "HC3" = diag(util^2),
+      "HC4" = diag(eh^2 / (1 - h)^min(4, n * h / (n - df)))
+    )
+
+    vcov <- if (se_type == "standard") {
+      rlang::eval_tidy(standard)
+    } else {
+      rlang::eval_tidy(hce, list(sigma = sigma))
+    }
+
+    output$vcov$matrix <- vcov
+    output$vcov$type <- se_type
+  } else {
+    ## cluster-robust estimate of the variance matrix
+    ## see http://cameron.econ.ucdavis.edu/research/Cameron_Miller_JHR_2015_February.pdf
+    g <- unique(cluster)
+    gvcov <- lapply(g, function(i) {
+      bool <- cluster == i
+      gx <- x[bool, ]
+      gomega <- diag(w[bool])
+      geh <- matrix(eh[bool], ncol = 1)
+      t(gx) %*% gomega %*% geh %*% t(geh) %*% gomega %*% gx
+    })
+    gvcov <- Reduce("+", gvcov)
+    vcov <- xx %*% gvcov %*% xx
+
+    output$vcov$matrix <- vcov
+    output$vcov$type <- "cluster-robust"
+    output$vcov$cluster <- cluster
+
+    df <- length(g) - 1
+
+    output$df <- df
+  }
 
   # create coefficient table
-  btab <- cbind(b, se)
-  t <- sapply(seq_len(nrow(btab)), function(i) btab[i, 1] / btab[i, 2])
-  btab <- cbind(btab, t)
-  dft <- nrow(x) - ncol(x)
-  p <- apply(btab, 2, function(t) 2 * pt(-abs(t), dft))[, 3]
-  btab <- cbind(btab, p)
-  colnames(btab) <- c("Estimate", "Std.Err.", "t", "P(>|t|)")
+  bmat <- cbind(b, sqrt(diag(vcov)))
+  t <- sapply(seq_len(nrow(bmat)), function(i) bmat[i, 1] / bmat[i, 2])
+  bmat <- cbind(bmat, t)
+  p <- apply(bmat, 2, function(t) 2 * pt(-abs(t), df))[, 3]
+  bmat <- cbind(bmat, p)
+  colnames(bmat) <- c("Estimate", "Std.Err.", "t", "P(>|t|)")
 
-  # output
-  output <- list(
-    input = list(
-      response = y,
-      design = x,
-      weights = wv
-    ),
-    estimate = btab,
-    N = nrow(x),
-    yhat = yhat,
-    ehat = ehat,
-    vcov = vcov,
-    se.type = hc
-  )
+  output$estimate <- bmat
   output
 }

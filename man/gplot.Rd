@@ -9,7 +9,7 @@ gplot(object, ...)
 
 \method{gplot}{global_lm}(
   object,
-  order,
+  usemod,
   treat_label = c("treated", "control"),
   ate_label_size = 5,
   ate_label_digits = 3,
@@ -29,7 +29,7 @@ gplot(object, ...)
 
 \item{\dots}{arguments of \code{\link[=simplegg]{simplegg()}}}
 
-\item{order}{numeric. which polynomial order model you use}
+\item{usemod}{numeric vector. which models do you want to plot?}
 
 \item{treat_label}{string vector of treatment and control label}
 
@@ -74,11 +74,12 @@ est <- global_lm(data = raw, weights = w)
 
 gplot(
   est,
-  order = 1,
+  usemod = c(1, 2),
   treat_label = c("Treated", "Control"),
-  ylim = list("y" = c(0, 110)),
-  vjust = c("y" = 20),
-  hjust = c("y" = -0.6),
+  outcome_label = switch(x,
+    "1" = "Simulated outcome",
+    "2" = "Simulated outcome > 0"
+  ),
   ylab = "Weighted Average",
   ate_label_size = 4,
   ate_label_name = "RD estimate"

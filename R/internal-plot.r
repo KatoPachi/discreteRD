@@ -39,8 +39,8 @@ gplot_internal_cutoff <- function(aggregate,
                                   ...) {
   g <- ggplot2::ggplot(aggregate, ggplot2::aes(x = x, y = outcome)) +
     ggplot2::geom_point(ggplot2::aes(shape = d), size = 2) +
-    ggplot2::geom_line(ggplot2::aes(x = x + cutoff, y = yhat), predict1) +
-    ggplot2::geom_line(ggplot2::aes(x = x + cutoff, y = yhat), predict0) +
+    ggplot2::geom_line(ggplot2::aes(x = x + cutoff, y = yhat1), predict1) +
+    ggplot2::geom_line(ggplot2::aes(x = x + cutoff, y = yhat0), predict0) +
     ggplot2::geom_vline(ggplot2::aes(xintercept = cutoff), linetype = 3) +
     ggplot2::annotate(
       "text", x = -Inf, y = Inf, label = ate_label,

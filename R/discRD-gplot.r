@@ -7,8 +7,7 @@ gplot <- function(object, ...) {
 
 #'
 #' @param object object
-#' @param order numeric. which polynomial order model you use
-#' @param treat_label string vector of treatment and control label
+#' @param usemod numeric vector. which models do you want to plot?
 #' @param treat_label string vector of treatment and control label
 #' @param ate_label_size In-plot text size
 #' @param ate_label_digits decimal places of in-plot ATE result.
@@ -25,6 +24,10 @@ gplot <- function(object, ...) {
 #' @importFrom patchwork wrap_plots
 #' @importFrom patchwork plot_layout
 #' @importFrom ggplot2 theme
+#' @importFrom rlang quo
+#' @importFrom rlang enquos
+#' @importFrom rlang quo_is_missing
+#' @importFrom rlang eval_tidy
 #' @export
 #' @examples
 #' running <- sample(1:100, size = 1000, replace = TRUE)
@@ -46,11 +49,12 @@ gplot <- function(object, ...) {
 #'
 #' gplot(
 #'   est,
-#'   order = 1,
+#'   usemod = c(1, 2),
 #'   treat_label = c("Treated", "Control"),
-#'   ylim = list("y" = c(0, 110)),
-#'   vjust = c("y" = 20),
-#'   hjust = c("y" = -0.6),
+#'   outcome_label = switch(x,
+#'     "1" = "Simulated outcome",
+#'     "2" = "Simulated outcome > 0"
+#'   ),
 #'   ylab = "Weighted Average",
 #'   ate_label_size = 4,
 #'   ate_label_name = "RD estimate"
@@ -59,7 +63,7 @@ gplot <- function(object, ...) {
 #' @name gplot
 #'
 gplot.global_lm <- function(object,
-                            order,
+                            usemod,
                             treat_label = c("treated", "control"),
                             ate_label_size = 5,
                             ate_label_digits = 3,
@@ -72,25 +76,13 @@ gplot.global_lm <- function(object,
                             ylab = "Average",
                             patchwork = TRUE,
                             ...) {
-  # flag using estimation results
-  outline <- object$model.outline
-  modlen <- seq_len(nrow(outline))
-  useres <- modlen[outline$order == order & unlist(outline$covmod) == ""]
-
-  # label of estimation results
-  label <- sapply(useres, function(i) {
-    as.character(rlang::f_lhs(outline[i, ]$basemod[[1]]))
-  })
-
-  # recover data
-  dt <- lapply(useres, recover_data, object = object)
-  names(dt) <- label
-
   # observed data aggregated by mass points
+  i <- NULL
   vars <- c("outcome", "weights", "d")
-  agg <- lapply(dt, function(d) {
-    d$outcome <- d$outcome * d$weights
-    agdt <- aggregate(d[, vars], by = list(x = d$x), mean)
+  aggregate_quo <- rlang::quo({
+    data <- recover_data(object, i)
+    data$outcome <- data$outcome * data$weights
+    agdt <- aggregate(data[, vars], by = list(x = data$x), mean)
     agdt$outcome <- agdt$outcome / agdt$weights
     agdt$x <- agdt$x + object$RD.info$cutoff
     agdt$d <- factor(agdt$d, levels = c(1, 0), labels = treat_label)
@@ -98,100 +90,70 @@ gplot.global_lm <- function(object,
   })
 
   # prediction data
-  pred <- lapply(seq_len(length(useres)), function(i) {
-    newdt <- dt[[i]]
-    newdt <- newdt[, !(names(newdt) %in% vars)]
+  prediction_quo <- rlang::quo({
+    data <- recover_data(object, i)
+    newdt <- data[, !(names(data) %in% vars)]
     newdt <- newdt[!duplicated(newdt), ]
-    predict(object$result[[useres[i]]], newdata = newdt)
-  })
-  names(pred) <- label
-
-  # treated prediction data
-  pd1 <- if (object$RD.info$assign == "greater") {
-    lapply(pred, function(d) d[x >= 0, ])
-  } else {
-    lapply(pred, function(d) d[x <= 0, ])
-  }
-
-  pd1 <- lapply(pd1, function(d) {
-    names(d)[names(d) == "yhat1"] <- "yhat"
-    d
+    predict(object$result[[i]], newdata = newdt)
   })
 
-  # control prediction data
-  pd0 <- if (object$RD.info$assign == "greater") {
-    lapply(pred, function(d) d[x <= 0, ])
-  } else {
-    lapply(pred, function(d) d[x >= 0, ])
-  }
+  # subset condition for prediction data
+  cond <- switch(object$RD.info$assign,
+    "greater" = rlang::quo(x >= 0),
+    "smaller" = rlang::quo(x <= 0)
+  )
 
-  pd0 <- lapply(pd0, function(d) {
-    names(d)[names(d) == "yhat0"] <- "yhat"
-    d
-  })
-
+  # In-plot label about result of local ATE
   numform <- paste0("%1.", ate_label_digits, "f")
   label1 <- paste0(ate_label_name, ": ", numform, "***(", numform, ")")
   label2 <- paste0(ate_label_name, ": ", numform, "**(", numform, ")")
   label3 <- paste0(ate_label_name, ": ", numform, "*(", numform, ")")
   label4 <- paste0(ate_label_name, ": ", numform, "(", numform, ")")
 
-  ate_label <- lapply(useres, function(i) {
+  label_quo <- rlang::quo({
     ate <- object$result[[i]]$local.ate
-    p <- ate[, 4]
     dplyr::case_when(
-      p <= 0.01 ~ sprintf(label1, ate[, 1], ate[, 2]),
-      p <= 0.05 ~ sprintf(label2, ate[, 1], ate[, 2]),
-      p <= 0.10 ~ sprintf(label3, ate[, 1], ate[, 2]),
-      TRUE      ~ sprintf(label4, ate[, 1], ate[, 2])
+      ate[, 4] <= 0.01 ~ sprintf(label1, ate[, 1], ate[, 2]),
+      ate[, 4] <= 0.05 ~ sprintf(label2, ate[, 1], ate[, 2]),
+      ate[, 4] <= 0.10 ~ sprintf(label3, ate[, 1], ate[, 2]),
+      TRUE ~ sprintf(label4, ate[, 1], ate[, 2])
     )
   })
-  names(ate_label) <- label
 
-  # collect arguments
-  args <- as.list(match.call())[-1]
-
-  parg_name <- c(
-    "ate_label_size",
-    "outcome_label",
-    "ylim",
-    "vjust",
-    "hjust",
-    "xlab",
-    "ylab"
+  # Other arguments for plot manipulation
+  pargs <- rlang::enquos(
+    ate_label_size = ate_label_size,
+    outcome_label = outcome_label,
+    ylim = ylim,
+    vjust = vjust,
+    hjust = hjust,
+    xlab = xlab,
+    ylab = ylab
   )
 
-  parg <- args[names(args) %in% parg_name]
-  parg <- lapply(parg, eval)
-  if (is.null(parg$outcome_label)){
-    parg$outcome_label <- setNames(label, label)
-  }
+  pargs <- Filter(Negate(rlang::quo_is_missing), pargs)
 
-  parg <- append(
-    parg,
-    list(
-      aggregate = agg,
-      predict1 = pd1,
-      predict0 = pd0,
-      cutoff = object$RD.info$cutoff,
-      ate_label = ate_label
-    )
-  )
-
+  # Arguments for template
   tmparg <- list(...)
 
-  # plot
-  plist <- lapply(label, function(l) {
-    parg <- lapply(parg, function(a) {
-      if (any(names(a) != "")) {
-        if (is.list(a)) a[names(a) == l][[l]] else a[names(a) == l]
-      } else {
-        a
-      }
-    })
-    bool <- unlist(lapply(parg, function(l) length(l) != 0))
-    parg <- parg[bool]
-    do.call("gplot_internal_cutoff", append(parg, tmparg))
+  # draw plots
+  plist <- lapply(usemod, function(m) {
+    # eval arguments
+    args <- list()
+    args$aggregate <- rlang::eval_tidy(aggregate_quo, list(i = m))
+    pred <- rlang::eval_tidy(prediction_quo, list(i = m))
+    bool <- rlang::eval_tidy(cond, pred)
+    args$predict1 <- pred[bool, ]
+    args$predict0 <- pred[!bool, ]
+    args$ate_label <- rlang::eval_tidy(label_quo, list(i = m))
+    args$cutoff <- object$RD.info$cutoff
+
+    # eval pargs
+    eval_pargs <- lapply(pargs, rlang::eval_tidy, list(x = as.character(m)))
+    args <- append(args, eval_pargs)
+
+    # draw plot
+    do.call("gplot_internal_cutoff", append(args, tmparg))
   })
 
   if (patchwork) {

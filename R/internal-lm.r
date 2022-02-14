@@ -28,7 +28,8 @@ lm_internal <- function(y,
   if (!is.matrix(x)) x <- as.matrix(x)
   x <- cbind("(Intercept)" = 1, x)
   if (nrow(y) != nrow(x)) stop("different number of rows x and y")
-  w <- if (missing(w)) diag(1, nrow(x)) else diag(w)
+  wv <- if (missing(w)) rep(1, nrow(x)) else w
+  w <- diag(wv)
 
   # solve normal equation
   if (cholesky) {
@@ -68,7 +69,8 @@ lm_internal <- function(y,
   output <- list(
     input = list(
       response = y,
-      design = x
+      design = x,
+      weights = wv
     ),
     estimate = btab,
     N = nrow(x),
@@ -77,7 +79,5 @@ lm_internal <- function(y,
     vcov = vcov,
     se.type = hc
   )
-
-  if (!missing(w)) output$input$weights <- w
   output
 }

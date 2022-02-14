@@ -24,6 +24,7 @@ Imports:
     magrittr (>= 2.0.1),
     modelsummary (>= 0.9.1),
     officer (>= 0.4.1),
+    patchwork (>= 1.1.1),
     rlang (>= 0.4.12),
     stats,
     tables (>= 0.9.6)

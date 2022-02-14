@@ -10,8 +10,9 @@
 #'   If NULL, covariates are not controlled.
 #'   If missing, find `options("discRD.xmod")`
 #' @param data data.frame which you want to use.
-#' @param weights weight variable.
 #' @param subset subset condition.
+#' @param weights weight variable.
+#' @param cluster cluster variable.
 #' @param submod numeric vector.
 #'   Which baseline model you want to use.
 #' @param onlydmod logical (default is TRUE).
@@ -25,10 +26,11 @@
 #'   If "smaller",
 #'   treated whose running variable is less than or equal to cutoff.
 #'   If missing, try to find `getOption("discRD.assign")`.
+#' @param se_type character.
+#'   Calculate robust variance-covariance matrix
+#'   ("HC0", "HC1", "HC2", "HCj", "HC3", and "HC4")
 #' @param cholesky logical (default is TRUE).
 #'   When solving normal equation, use cholesky decomposition.
-#' @param hc character.
-#'   Calculate robust variance-covariance matrix ("HC0" or "HC1")
 #'
 #' @details \dots can pass lm_robust arguments
 #'   and some data formatting arguments.
@@ -83,12 +85,8 @@ global_lm <- function(basemod,
                       order = c(1, 2),
                       cutoff,
                       assign,
-                      cholesky = TRUE,
-                      hc = "HC0") {
-  # collect arguments
-  arg <- as.list(match.call())[-1]
-  arg$data <- data
-
+                      se_type = "HC0",
+                      cholesky = TRUE) {
   # check basemod and covmod if missing
   if (missing(basemod)) basemod <- getOption("discRD.basemod")
   if (!is.list(basemod)) basemod <- list(basemod)
@@ -107,8 +105,15 @@ global_lm <- function(basemod,
   if (nrow(mod) == 0) stop("Cannot construct model")
 
   # data cleaning
-  dt_arg_list_name <- c("data", "weights", "subset", "cutoff", "assign")
-  dtarg <- arg[names(arg) %in% dt_arg_list_name]
+  dtarg <- rlang::enquos(
+    subset = subset,
+    weights = weights,
+    cluster = cluster,
+    cutoff = cutoff,
+    assign = assign
+  )
+
+  dtarg <- Filter(Negate(rlang::quo_is_missing), dtarg)
 
   clean <- lapply(seq_len(nrow(mod)), function(i) {
     dtarg$basemod <- mod[i, "basemod"][[1]]

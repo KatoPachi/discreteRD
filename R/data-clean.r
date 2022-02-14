@@ -5,6 +5,7 @@
 #' @param data data.frame
 #' @param subset subset condition.
 #' @param weights weight variable.
+#' @param cluster cluster variable.
 #' @param cutoff numeric of cutoff point.
 #'   If missing, search `option("discRD.cutoff")`
 #' @param assign assignment rule of treatment.
@@ -42,6 +43,7 @@ clean_rd_data <- function(basemod,
                           data,
                           subset,
                           weights,
+                          cluster,
                           cutoff,
                           assign) {
   ## make formula
@@ -50,11 +52,17 @@ clean_rd_data <- function(basemod,
     mod <- update(mod, paste0(c(". ~ .", all.vars(covmod)), collapse = "+"))
   }
 
-  ## weight & subset condition vector
+  ## weight, cluster and subset condition vector
   wv <- NULL
   if (!missing(weights)) {
     if (!rlang::is_call(weights)) weights <- rlang::enquo(weights)
     wv <- rlang::eval_tidy(weights, data)
+  }
+
+  gv <- NULL
+  if (!missing(cluster)) {
+    if (!rlang::is_call(cluster)) cluster <- rlang::enquo(cluster)
+    gv <- rlang::eval_tidy(cluster, data)
   }
 
   tfv <- NULL
@@ -69,6 +77,7 @@ clean_rd_data <- function(basemod,
     data = data,
     subset = tfv,
     weights = wv,
+    cluster = gv,
     na.action = na.omit
   )
 

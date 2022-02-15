@@ -4,7 +4,7 @@
 \alias{wls}
 \title{Weighted Least Squares}
 \usage{
-wls(y, x, w, se_type = "HC0", cluster, cholesky = TRUE)
+wls(y, x, w, se = "HC0", cluster, cholesky = TRUE)
 }
 \arguments{
 \item{y}{outcome vector.}
@@ -13,11 +13,15 @@ wls(y, x, w, se_type = "HC0", cluster, cholesky = TRUE)
 
 \item{w}{weight matrix}
 
+\item{se}{character.
+How to calculate robust variance-covariance matrix
+("HC0", "HC1", "HC2", "HCj", "HC3", and "HC4")
+If "standard", calculate conventional variance-covariance matrix}
+
+\item{cluster}{cluster variable.}
+
 \item{cholesky}{logical (default is TRUE).
 When solving normal equation, use cholesky decomposition.}
-
-\item{hc}{character.
-Calculate robust variance-covariance matrix ("HC0" or "HC1")}
 }
 \description{
 Weighted Least Squares

@@ -2,18 +2,18 @@
 % Please edit documentation in R/methods-generics.r
 \name{tidy.global_lm}
 \alias{tidy.global_lm}
-\alias{tidy.local_ate_local_lm}
+\alias{tidy.local_lm}
 \alias{glance.global_lm}
-\alias{glance.local_ate_local_lm}
+\alias{glance.local_lm}
 \title{Methods of tidy and glance}
 \usage{
 \method{tidy}{global_lm}(x, ...)
 
-\method{tidy}{local_ate_local_lm}(x, ...)
+\method{tidy}{local_lm}(x, ...)
 
 \method{glance}{global_lm}(x, ...)
 
-\method{glance}{local_ate_local_lm}(x, ...)
+\method{glance}{local_lm}(x, ...)
 }
 \arguments{
 \item{x}{object}

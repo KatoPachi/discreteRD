@@ -203,6 +203,7 @@ fit_wls <- function(y,
     fit.wls$input$local.wls$kernel <- kernel
     fit.wls$input$local.wls$data.point <- point
     fit.wls$input$local.wls$bandwidth <- bw
+    fit.wls$input$local.wls$effective.nobs <- sum(kw > 0)
   }
 
   fit.wls

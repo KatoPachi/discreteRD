@@ -16,7 +16,7 @@ global_lm(
   order = c(1, 2),
   cutoff,
   assign,
-  se_type = "HC0",
+  se = "HC0",
   cholesky = TRUE
 )
 }
@@ -54,9 +54,10 @@ If "smaller",
 treated whose running variable is less than or equal to cutoff.
 If missing, try to find \code{getOption("discRD.assign")}.}
 
-\item{se_type}{character.
-Calculate robust variance-covariance matrix
-("HC0", "HC1", "HC2", "HCj", "HC3", and "HC4")}
+\item{se}{character.
+How to calculate robust variance-covariance matrix
+("HC0", "HC1", "HC2", "HCj", "HC3", and "HC4")
+If "standard", calculate conventional variance-covariance matrix}
 
 \item{cholesky}{logical (default is TRUE).
 When solving normal equation, use cholesky decomposition.}
@@ -65,25 +66,6 @@ When solving normal equation, use cholesky decomposition.}
 Estimate the local ATE
 at the treatment assignment threshold
 by the global least squares method.
-}
-\details{
-\dots can pass lm_robust arguments
-and some data formatting arguments.
-There are three arguments for data formatting.
-"x" is a string of running variables.
-"cutoff" is the threshold of the running variable
-in the treatment assignment.
-"assign" is a rule for assigning treatments.
-If \code{assign ="smaller"}, receive treatment
-when the running variable is less than or equal to
-the cutoff value.
-If \code{assign ="greater"},
-receive treatment when the running variable is
-greater than or equal to the cutoff value.
-When using "weight" to run weighted least squares,
-specify a string of weight variable.
-When you don't specify "se_type",
-use "HC1" to calculate standard errors.
 }
 \examples{
 running <- sample(1:100, size = 1000, replace = TRUE)
@@ -106,6 +88,6 @@ est <- global_lm(data = raw)
 str(global_lm(submod = 1, data = raw))
 str(global_lm(submod = 1, order = 3, data = raw))
 str(global_lm(data = raw, cutoff = 30))
-est2 <- global_lm(data = raw, hc = "HC1", weights = w)
+est2 <- global_lm(data = raw, se = "HC1", weights = w)
 
 }

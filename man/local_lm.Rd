@@ -7,14 +7,15 @@
 local_lm(
   basemod,
   data,
-  weights,
   subset,
+  weights,
+  cluster,
   submod,
   order = c(1, 2),
   cutoff,
   assign,
+  se = "HC0",
   cholesky = TRUE,
-  hc = "HC0",
   bw,
   kernel,
   point = 0
@@ -25,14 +26,16 @@ local_lm(
 
 \item{data}{data.frame which you want to use.}
 
+\item{subset}{subset condition.}
+
 \item{weights}{weight variable.}
 
-\item{subset}{subset condition.}
+\item{cluster}{cluster variable.}
 
 \item{submod}{numeric vector.
 Which baseline model you want to use.}
 
-\item{order}{numeric vector of global polynomial orders.}
+\item{order}{numeric vector of polynomial orders.}
 
 \item{cutoff}{numeric of cutoff points
 If missing, try to find \code{getOption("discRD.cutoff")}.}
@@ -44,11 +47,12 @@ If "smaller",
 treated whose running variable is less than or equal to cutoff.
 If missing, try to find \code{getOption("discRD.assign")}.}
 
+\item{se}{character.
+How to calculate robust variance-covariance matrix
+("HC0", "HC1", "HC2", "HCj", "HC3", and "HC4")}
+
 \item{cholesky}{logical (default is TRUE).
 When solving normal equation, use cholesky decomposition.}
-
-\item{hc}{character.
-Calculate robust variance-covariance matrix ("HC0" or "HC1")}
 
 \item{bw}{bandwidth.}
 
@@ -61,25 +65,6 @@ the kernel weights weigh the most}
 Estimate the local ATE
 at the treatment assignment threshold
 by the local linear regression.
-}
-\details{
-\dots can pass lm_robust arguments
-and some data formatting arguments.
-There are three arguments for data formatting.
-"x" is a string of running variables.
-"cutoff" is the threshold of the running variable
-in the treatment assignment.
-"assign" is a rule for assigning treatments.
-If \code{assign ="smaller"}, receive treatment
-when the running variable is less than or equal to
-the cutoff value.
-If \code{assign ="greater"},
-receive treatment when the running variable is
-greater than or equal to the cutoff value.
-When using "weight" to run weighted least squares,
-specify a string of weight variable.
-When you don't specify "se_type",
-use "HC1" to calculate standard errors.
 }
 \examples{
 running <- sample(1:100, size = 1000, replace = TRUE)
@@ -103,7 +88,7 @@ str(local_lm(submod = 1, data = raw, bw = 3, kernel = "uniform"))
 str(local_lm(submod = 1, order = 3, data = raw, bw = 3, kernel = "uniform"))
 str(local_lm(data = raw, cutoff = 30, bw = 3, kernel = "uniform"))
 est2 <- local_lm(
-data = raw, hc = "HC1", weights = w, bw = 3, kernel = "uniform"
+  data = raw, se = "HC1", weights = w, bw = 3, kernel = "uniform"
 )
 
 }

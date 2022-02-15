@@ -38,3 +38,28 @@ recover_data.list_global_lm <- function(object, modnum) {
   colnames(d) <- c("outcome", xlab, "weights", "d")
   d
 }
+
+#'
+#' @name recover_data
+#' @export
+#'
+recover_data.list_local_lm <- function(object, modnum) {
+  d <- recover_data.list_global_lm(object, modnum)
+  res <- object$result[[modnum]]
+
+  d$kweight <- c(
+    res$control$input$local.wls$kernel.w,
+    res$treat$input$local.wls$kernel.w
+  )
+
+  if (!is.null(res$treat$input$local.wls$given.w)) {
+    d$sweight <- c(
+      res$control$input$local.wls$given.w,
+      res$treat$input$local.wls$given.w
+    )
+  } else {
+    d$sweight <- 1
+  }
+
+  d
+}

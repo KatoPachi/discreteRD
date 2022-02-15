@@ -20,7 +20,7 @@ fit_wls(y, data, global = TRUE, kernel, bw, point, ...)
 \item{point}{value of the running variable that
 the kernel weights weigh the most.}
 
-\item{\dots}{se_type and cholesky arguments}
+\item{\dots}{se and cholesky arguments}
 }
 \description{
 Fit weighted least squares

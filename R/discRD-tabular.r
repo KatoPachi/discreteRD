@@ -181,6 +181,8 @@ rdtab.local_random_test <- function(object,
 #'   "x1" and "x2" labels are aggregated into one line with the name "label".
 #' @param stars a named numeric vector to indicate statistical significance.
 #'   `"***" = 0.01` means show *** if p-value is less than or equal to 0.01.
+#' @param gof_omit string regular expression.
+#'   Omits all matching gof statistics from the table.
 #' @param title a string of title
 #' @param footnote a string of footnote
 #' @param output a string of output format.
@@ -248,6 +250,7 @@ rdtab.list_global_lm <- function(object,
                                  olab = "Order of polynomial",
                                  covariate_labs,
                                  stars = c("***" = .01, "**" = .05, "*" = .1),
+                                 gof_omit = "se",
                                  title = NULL,
                                  footnote = NULL,
                                  output = getOption("discRD.table_output"),
@@ -322,7 +325,7 @@ rdtab.list_global_lm <- function(object,
   tab <- modelsummary::modelsummary(
     object$result,
     coef_map = keep_coef,
-    gof_omit = "se",
+    gof_omit = gof_omit,
     group = outcome + term ~ model,
     stars = stars,
     fmt = digits,
@@ -456,6 +459,8 @@ rdtab.list_global_lm <- function(object,
 #' @param olab a string of label of "Order of polynomial"
 #' @param stars a named numeric vector to indicate statistical significance.
 #'   `"***" = 0.01` means show *** if p-value is less than or equal to 0.01.
+#' @param gof_omit string regular expression.
+#'   Omits all matching gof statistics from the table.
 #' @param title a string of title
 #' @param footnote a string of footnote
 #' @param output a string of output format.
@@ -517,17 +522,18 @@ rdtab.list_global_lm <- function(object,
 #'   )
 #' }
 #'
-rdtab.local_lm <- function(object,
-                           ylab,
-                           dlab = "treated",
-                           olab = "Order of polynomial",
-                           stars = c("***" = .01, "**" = .05, "*" = .1),
-                           title = NULL,
-                           footnote = NULL,
-                           output = getOption("discRD.table_output"),
-                           fontsize = getOption("discRD.table_fontsize"),
-                           digits = 3,
-                           ...) {
+rdtab.list_local_lm <- function(object,
+                                ylab,
+                                dlab = "treated",
+                                olab = "Order of polynomial",
+                                stars = c("***" = .01, "**" = .05, "*" = .1),
+                                gof_omit = "se",
+                                title = NULL,
+                                footnote = NULL,
+                                output = getOption("discRD.table_output"),
+                                fontsize = getOption("discRD.table_fontsize"),
+                                digits = 3,
+                                ...) {
   # Step 1: Create add_rows tabulation
   addtab <- data.frame(
     t(c(olab, as.character(object$model.outline$order)))
@@ -550,7 +556,7 @@ rdtab.local_lm <- function(object,
   tab <- modelsummary::modelsummary(
     object$result,
     coef_map = keep_coef,
-    gof_omit = "se",
+    gof_omit = gof_omit,
     group = outcome + term ~ model,
     stars = stars,
     fmt = digits,

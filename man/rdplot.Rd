@@ -3,11 +3,29 @@
 \name{rdplot}
 \alias{rdplot}
 \alias{rdplot.list_global_lm}
+\alias{rdplot.list_local_lm}
 \title{Flexible RD Plot}
 \usage{
 rdplot(object, ...)
 
 \method{rdplot}{list_global_lm}(
+  object,
+  usemod,
+  treat_label = c("treated", "control"),
+  ate_label_size = 5,
+  ate_label_digits = 3,
+  ate_label_name = "Local ATE",
+  outcome_label,
+  ylim,
+  vjust = 0,
+  hjust = 0,
+  xlab = "Running variable",
+  ylab = "Average",
+  patchwork = TRUE,
+  ...
+)
+
+\method{rdplot}{list_local_lm}(
   object,
   usemod,
   treat_label = c("treated", "control"),

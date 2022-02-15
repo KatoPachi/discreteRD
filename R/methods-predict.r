@@ -37,3 +37,56 @@ predict.global_lm <- function(object, ...) {
     out
   }
 }
+
+#'
+#' @export
+#'
+#'
+predict.local_lm <- function (object, ...) {
+  args <- list(...)
+  flag <- is.null(object$local.ate)
+
+  if (is.null(args$newdata)) {
+    if (flag) {
+      point <- object$input$local.wls$data.point
+      xmat <- matrix(c(1, point), nrow = 1)
+      colnames(xmat) <- c("(Intercept)", "x")
+
+      order <- ncol(object$input$design) - 1
+      if (order > 1) {
+        for (o in seq(2, order)) {
+          xmat <- cbind(xmat, point^o)
+          colnames(xmat)[o + 1] <- paste0("x", o)
+        }
+      }
+
+      b <- object$estimate[, 1]
+      b <- matrix(b[colnames(xmat)], ncol = 1)
+      yhat <- xmat %*% b
+
+      data.frame(x = point, yhat = yhat)
+    } else {
+      predict.global_lm(object)
+    }
+  } else {
+    if (flag) {
+      newdt <- args$newdata
+      design <- as.matrix(newdt)
+
+      b <- object$estimate[, 1]
+      b <- matrix(b[colnames(design)], ncol = 1)
+      yhat <- design %*% b1
+      out <- cbind(yhat1, design)
+      out <- data.frame(out)
+      colnames(out) <- c("yhat", colnames(design))
+      out
+    } else {
+      predict.global_lm(object, args$newdata)
+    }
+  }
+}
+
+a <- matrix(c(1, 3), nrow = 1)
+colnames(a) <- c("a", "b")
+a <- cbind(a, 3)
+colnames(a)[3] <- "c"

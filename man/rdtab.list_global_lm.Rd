@@ -11,6 +11,7 @@
   olab = "Order of polynomial",
   covariate_labs,
   stars = c(`***` = 0.01, `**` = 0.05, `*` = 0.1),
+  gof_omit = "se",
   title = NULL,
   footnote = NULL,
   output = getOption("discRD.table_output"),
@@ -40,6 +41,9 @@ the coefficients are not displayed in all models,
 
 \item{stars}{a named numeric vector to indicate statistical significance.
 \code{"***" = 0.01} means show *** if p-value is less than or equal to 0.01.}
+
+\item{gof_omit}{string regular expression.
+Omits all matching gof statistics from the table.}
 
 \item{title}{a string of title}
 

@@ -21,8 +21,8 @@ tidy.global_lm <- function(x, ...) {
 #'
 #' @export
 #' @name tidy.global_lm
-tidy.local_ate_local_lm <- function(x, ...) {
-  tidy.local_ate_global_lm(x, ...)
+tidy.local_lm <- function(x, ...) {
+  tidy.global_lm(x, ...)
 }
 
 #'
@@ -37,14 +37,18 @@ glance.global_lm <- function(x, ...) {
 }
 
 #'
+#' @importFrom tibble tibble
 #' @export
 #' @name tidy.global_lm
-glance.local_ate_local_lm <- function(x, ...) {
-  data.frame(
-    nobs = x$treat$N + x$control$N,
-    "Effective Num.Obs." = x$method$effective.nobs,
-    se = x$treat$se.type,
-    kernel = x$method$kernel,
-    bandwidth = x$method$bandwidth
+glance.local_lm <- function(x, ...) {
+  n <- x$treat$N + x$control$N
+  efn <- x$treat$input$local.wls$effective.nobs +
+    x$control$input$local.wls$effective.nobs
+  tibble::tibble(
+    nobs = n,
+    "Effective Num.Obs." = sprintf("%1d", efn),
+    se = x$treat$vcov$type,
+    kernel = x$treat$input$local.wls$kernel,
+    bandwidth = x$treat$input$local.wls$bandwidth
   )
 }

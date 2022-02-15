@@ -4,7 +4,17 @@
 \alias{clean_rd_data}
 \title{Data Shape}
 \usage{
-clean_rd_data(basemod, covmod, data, subset, weights, cutoff, assign)
+clean_rd_data(
+  basemod,
+  covmod,
+  data,
+  subset,
+  weights,
+  cluster,
+  order = 1,
+  cutoff,
+  assign
+)
 }
 \arguments{
 \item{basemod}{baseline formula. \verb{outcome ~ running variable}.}
@@ -16,6 +26,10 @@ clean_rd_data(basemod, covmod, data, subset, weights, cutoff, assign)
 \item{subset}{subset condition.}
 
 \item{weights}{weight variable.}
+
+\item{cluster}{cluster variable.}
+
+\item{order}{order of polynomial.}
 
 \item{cutoff}{numeric of cutoff point.
 If missing, search \code{option("discRD.cutoff")}}
@@ -42,7 +56,7 @@ w <- sample(c(1, 0.5), size = 1000, replace = TRUE)
 raw <- data.frame(y, bin, running, cov1, cov2, w)
 
 set_optDiscRD(discRD.cutoff = 50, discRD.assign = "smaller")
-a <- clean_rd_data(y ~ running + cov1, data = raw, weights = w)
+a <- clean_rd_data(y ~ running + cov1, data = raw, weights = w, order = 2)
 str(a)
 }
 

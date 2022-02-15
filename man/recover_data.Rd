@@ -2,12 +2,12 @@
 % Please edit documentation in R/data-recover.r
 \name{recover_data}
 \alias{recover_data}
-\alias{recover_data.global_lm}
+\alias{recover_data.list_global_lm}
 \title{Recover Data from estimation object}
 \usage{
 recover_data(object, ...)
 
-\method{recover_data}{global_lm}(object, modnum)
+\method{recover_data}{list_global_lm}(object, modnum)
 }
 \arguments{
 \item{object}{object with global_lm class}

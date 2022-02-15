@@ -1,7 +1,7 @@
 #' @export 
 #' 
 #' 
-predict.local_ate_global_lm <- function(object, ...) {
+predict.global_lm <- function(object, ...) {
   args <- list(...)
   if (is.null(args$newdata)) {
     d0 <- cbind(

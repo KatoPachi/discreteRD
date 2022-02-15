@@ -26,29 +26,12 @@
 #'   If "smaller",
 #'   treated whose running variable is less than or equal to cutoff.
 #'   If missing, try to find `getOption("discRD.assign")`.
-#' @param se_type character.
-#'   Calculate robust variance-covariance matrix
+#' @param se character.
+#'   How to calculate robust variance-covariance matrix
 #'   ("HC0", "HC1", "HC2", "HCj", "HC3", and "HC4")
+#'   If "standard", calculate conventional variance-covariance matrix
 #' @param cholesky logical (default is TRUE).
 #'   When solving normal equation, use cholesky decomposition.
-#'
-#' @details \dots can pass lm_robust arguments
-#'   and some data formatting arguments.
-#'   There are three arguments for data formatting.
-#'   "x" is a string of running variables.
-#'   "cutoff" is the threshold of the running variable
-#'   in the treatment assignment.
-#'   "assign" is a rule for assigning treatments.
-#'   If `assign ="smaller"`, receive treatment
-#'   when the running variable is less than or equal to
-#'   the cutoff value.
-#'   If `assign ="greater"`,
-#'   receive treatment when the running variable is
-#'   greater than or equal to the cutoff value.
-#'   When using "weight" to run weighted least squares,
-#'   specify a string of weight variable.
-#'   When you don't specify "se_type",
-#'   use "HC1" to calculate standard errors.
 #'
 #' @importFrom stats pnorm
 #' @export
@@ -73,19 +56,20 @@
 #' str(global_lm(submod = 1, data = raw))
 #' str(global_lm(submod = 1, order = 3, data = raw))
 #' str(global_lm(data = raw, cutoff = 30))
-#' est2 <- global_lm(data = raw, hc = "HC1", weights = w)
+#' est2 <- global_lm(data = raw, se = "HC1", weights = w)
 #'
 global_lm <- function(basemod,
                       covmod,
                       data,
-                      weights,
                       subset,
+                      weights,
+                      cluster,
                       submod,
                       onlydmod = TRUE,
                       order = c(1, 2),
                       cutoff,
                       assign,
-                      se_type = "HC0",
+                      se = "HC0",
                       cholesky = TRUE) {
   # check basemod and covmod if missing
   if (missing(basemod)) basemod <- getOption("discRD.basemod")
@@ -104,91 +88,67 @@ global_lm <- function(basemod,
   mod <- mod[!duplicated(mod), ]
   if (nrow(mod) == 0) stop("Cannot construct model")
 
-  # data cleaning
+  output <- list()
+  output$model.outline <- mod
+
+  # collect arguments
   dtarg <- rlang::enquos(
     subset = subset,
     weights = weights,
-    cluster = cluster,
-    cutoff = cutoff,
-    assign = assign
+    cluster = cluster
   )
-
   dtarg <- Filter(Negate(rlang::quo_is_missing), dtarg)
 
-  clean <- lapply(seq_len(nrow(mod)), function(i) {
+  if (!missing(cutoff)) dtarg$cutoff <- cutoff
+  if (!missing(assign)) dtarg$assign <- assign
+  dtarg$data <- data
+
+  estarg <- list(
+    se = se,
+    cholesky = cholesky
+  )
+
+  # estimation
+  est <- lapply(seq_len(nrow(mod)), function(i) {
+    # data cleaning
     dtarg$basemod <- mod[i, "basemod"][[1]]
     coveq <- mod[i, "covmod"][[1]]
     if (coveq != "") dtarg$covmod <- coveq
-    do.call("clean_rd_data", dtarg)
-  })
+    dtarg$order <- mod[i, "order"]
+    useit <- do.call("clean_rd_data", dtarg)
 
-  # order of polynomial
-  estdt <- lapply(seq_len(nrow(mod)), function(i) {
-    # polynomial order
-    dt <- clean[[i]]$data
-    if (mod[i, "order"] > 1) {
-      for (j in seq(2, mod[i, "order"])) {
-        o <- j
-        lab <- paste0("x", o)
-        dt[[lab]] <- dt$x ^ o
-      }
-    }
-    dt
-  })
+    # treatment and control data
+    d1 <- useit$data[useit$data$d == 1, ]
+    d0 <- useit$data[useit$data$d == 0, ]
 
-  # estimation in treated and control
-  estarg_name <- c("cholesky", "hc")
-  estarg <- arg[names(arg) %in% estarg_name]
-
-  est <- lapply(seq_len(nrow(mod)), function(i) {
-    # subset
-    d1 <- estdt[[i]][estdt[[i]]$d == 1, ]
-    d0 <- estdt[[i]][estdt[[i]]$d == 0, ]
-
-    # variables
-    yvar <- rlang::f_lhs(mod[i, "basemod"][[1]])
-    exclude_x <- c(as.character(yvar), "(weights)", "d")
-
-    # estimation in treated data
-    estarg$y <- rlang::eval_tidy(yvar, d1)
-    design <- as.matrix(d1[, !(names(d1) %in% exclude_x)])
-    colnames(design) <- names(d1)[!(names(d1) %in% exclude_x)]
-    estarg$x <- design
-    if (!is.null(d1$"(weights)")) estarg$w <- d1$"(weights)"
-    treat <- do.call("lm_internal", estarg)
-
-    # estimation in control data
-    estarg$y <- rlang::eval_tidy(yvar, d0)
-    design <- as.matrix(d0[, !(names(d0) %in% exclude_x)])
-    colnames(design) <- names(d0)[!(names(d0) %in% exclude_x)]
-    estarg$x <- design
-    if (!is.null(d0$"(weights)")) estarg$w <- d0$"(weights)"
-    ctrl <- do.call("lm_internal", estarg)
+    # estimation
+    y <- rlang::f_lhs(mod[i, "basemod"][[1]])
+    treat <- do.call("fit_wls", append(estarg, list(data = d1, y = y)))
+    ctrl <- do.call("fit_wls", append(estarg, list(data = d0, y = y)))
 
     # local ATE
     ate <- treat$estimate[1, 1] - ctrl$estimate[1, 1]
-    ate_se <- sqrt(treat$vcov[1, 1] + ctrl$vcov[1, 1])
+    ate_se <- sqrt(treat$vcov$matrix[1, 1] + ctrl$vcov$matrix[1, 1])
     ate_z <- abs(ate) / ate_se
     ate_p <- 2 * pnorm(ate_z, lower.tail = FALSE)
     ate_mat <- matrix(c(ate, ate_se, ate_z, ate_p), nrow = 1)
     colnames(ate_mat) <- c("Estimate", "Std.Err.", "z", "P(>|z|)")
     rownames(ate_mat) <- c("Local ATE")
 
-    estlist <- list(
-      outcome = as.character(yvar),
+    # output
+    res <- list(
+      outcome = rlang::as_label(y),
+      RD.info = useit$RD.info,
       treat = treat,
       control = ctrl,
       local.ate = ate_mat
     )
-    class(estlist) <- "local_ate_global_lm"
-    estlist
+    class(res) <- "global_lm"
+    res
   })
 
   # output
-  output <- list()
-  output$RD.info <- clean[[1]]$RD.info
-  output$model.outline <- mod
   output$result <- est
-  class(output) <- append("global_lm", class(output))
+  class(output) <- append("list_global_lm", class(output))
   output
 }

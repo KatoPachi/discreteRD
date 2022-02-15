@@ -8,15 +8,16 @@ global_lm(
   basemod,
   covmod,
   data,
-  weights,
   subset,
+  weights,
+  cluster,
   submod,
   onlydmod = TRUE,
   order = c(1, 2),
   cutoff,
   assign,
-  cholesky = TRUE,
-  hc = "HC0"
+  se_type = "HC0",
+  cholesky = TRUE
 )
 }
 \arguments{
@@ -29,9 +30,11 @@ If missing, find \code{options("discRD.xmod")}}
 
 \item{data}{data.frame which you want to use.}
 
+\item{subset}{subset condition.}
+
 \item{weights}{weight variable.}
 
-\item{subset}{subset condition.}
+\item{cluster}{cluster variable.}
 
 \item{submod}{numeric vector.
 Which baseline model you want to use.}
@@ -51,11 +54,12 @@ If "smaller",
 treated whose running variable is less than or equal to cutoff.
 If missing, try to find \code{getOption("discRD.assign")}.}
 
+\item{se_type}{character.
+Calculate robust variance-covariance matrix
+("HC0", "HC1", "HC2", "HCj", "HC3", and "HC4")}
+
 \item{cholesky}{logical (default is TRUE).
 When solving normal equation, use cholesky decomposition.}
-
-\item{hc}{character.
-Calculate robust variance-covariance matrix ("HC0" or "HC1")}
 }
 \description{
 Estimate the local ATE

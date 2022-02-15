@@ -4,10 +4,9 @@
 #' @param \dots other arguments
 #'
 #' @importFrom generics tidy
-#' @method tidy local_ate_global_lm
 #' @export
 #'
-tidy.local_ate_global_lm <- function(x, ...) {
+tidy.global_lm <- function(x, ...) {
   res <- x$local.ate
   data.frame(
     term = rownames(res),
@@ -20,29 +19,26 @@ tidy.local_ate_global_lm <- function(x, ...) {
 }
 
 #'
-#' @method tidy local_ate_local_lm
 #' @export
-#' @name tidy.local_ate_global_lm
+#' @name tidy.global_lm
 tidy.local_ate_local_lm <- function(x, ...) {
   tidy.local_ate_global_lm(x, ...)
 }
 
 #'
 #' @importFrom generics glance
-#' @method glance local_ate_global_lm
 #' @export
-#' @name tidy.local_ate_global_lm
-glance.local_ate_global_lm <- function(x, ...) {
+#' @name tidy.global_lm
+glance.global_lm <- function(x, ...) {
   data.frame(
     nobs = x$treat$N + x$control$N,
-    se = x$treat$se.type
+    se = x$treat$vcov$type
   )
 }
 
 #'
-#' @method glance local_ate_local_lm
 #' @export
-#' @name tidy.local_ate_global_lm
+#' @name tidy.global_lm
 glance.local_ate_local_lm <- function(x, ...) {
   data.frame(
     nobs = x$treat$N + x$control$N,

@@ -1,8 +1,8 @@
 #' Flexible RD Plot
 #' @export
 #' 
-gplot <- function(object, ...) {
-  UseMethod("gplot")
+rdplot <- function(object, ...) {
+  UseMethod("rdplot")
 }
 
 #'
@@ -60,22 +60,22 @@ gplot <- function(object, ...) {
 #'   ate_label_name = "RD estimate"
 #' )
 #'
-#' @name gplot
+#' @name rdplot
 #'
-gplot.global_lm <- function(object,
-                            usemod,
-                            treat_label = c("treated", "control"),
-                            ate_label_size = 5,
-                            ate_label_digits = 3,
-                            ate_label_name = "Local ATE",
-                            outcome_label,
-                            ylim,
-                            vjust = 0,
-                            hjust = 0,
-                            xlab = "Running variable",
-                            ylab = "Average",
-                            patchwork = TRUE,
-                            ...) {
+rdplot.list_global_lm <- function(object,
+                                  usemod,
+                                  treat_label = c("treated", "control"),
+                                  ate_label_size = 5,
+                                  ate_label_digits = 3,
+                                  ate_label_name = "Local ATE",
+                                  outcome_label,
+                                  ylim,
+                                  vjust = 0,
+                                  hjust = 0,
+                                  xlab = "Running variable",
+                                  ylab = "Average",
+                                  patchwork = TRUE,
+                                  ...) {
   # observed data aggregated by mass points
   i <- NULL
   vars <- c("outcome", "weights", "d")
@@ -84,7 +84,7 @@ gplot.global_lm <- function(object,
     data$outcome <- data$outcome * data$weights
     agdt <- aggregate(data[, vars], by = list(x = data$x), mean)
     agdt$outcome <- agdt$outcome / agdt$weights
-    agdt$x <- agdt$x + object$RD.info$cutoff
+    agdt$x <- agdt$x + object$result[[i]]$RD.info$cutoff
     agdt$d <- factor(agdt$d, levels = c(1, 0), labels = treat_label)
     agdt
   })
@@ -98,10 +98,12 @@ gplot.global_lm <- function(object,
   })
 
   # subset condition for prediction data
-  cond <- switch(object$RD.info$assign,
-    "greater" = rlang::quo(x >= 0),
-    "smaller" = rlang::quo(x <= 0)
-  )
+  condmake <- rlang::quo({
+    switch(object$result[[i]]$RD.info$assign,
+      "greater" = rlang::quo(x >= 0),
+      "smaller" = rlang::quo(x <= 0)
+    )
+  })
 
   # In-plot label about result of local ATE
   numform <- paste0("%1.", ate_label_digits, "f")
@@ -142,11 +144,12 @@ gplot.global_lm <- function(object,
     args <- list()
     args$aggregate <- rlang::eval_tidy(aggregate_quo, list(i = m))
     pred <- rlang::eval_tidy(prediction_quo, list(i = m))
+    cond <- rlang::eval_tidy(condmake, list(i = m))
     bool <- rlang::eval_tidy(cond, pred)
     args$predict1 <- pred[bool, ]
     args$predict0 <- pred[!bool, ]
     args$ate_label <- rlang::eval_tidy(label_quo, list(i = m))
-    args$cutoff <- object$RD.info$cutoff
+    args$cutoff <- object$result[[m]]$RD.info$cutoff
 
     # eval pargs
     eval_pargs <- lapply(pargs, rlang::eval_tidy, list(x = as.character(m)))

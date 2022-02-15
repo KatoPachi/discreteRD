@@ -7,8 +7,8 @@
 #'
 #' @export
 #'
-tabular <- function(...) {
-  UseMethod("tabular")
+rdtab <- function(...) {
+  UseMethod("rdtab")
 }
 
 #' Output Table for Local Random Approach
@@ -48,7 +48,6 @@ tabular <- function(...) {
 #' @importFrom flextable add_footer_lines
 #' @importFrom flextable add_header_row
 #' @importFrom flextable fontsize
-#' @method tabular local_random_test
 #' @export
 #'
 #' @examples
@@ -79,22 +78,22 @@ tabular <- function(...) {
 #' local_random_test(data = raw, bw = c(-5, 5)) %>%
 #'   tabular(ylab, digits = 2, footnote = footnote)
 #'
-tabular.local_random_test <- function(object,
-                                      ylab,
-                                      outcome_lab = "Outcomes",
-                                      meanlab = "Mean",
-                                      selab = "S.E.",
-                                      nlab = "N",
-                                      meandiff_lab = "Mean difference",
-                                      plab = "P-value",
-                                      treat_header = "Treated",
-                                      control_header = "Control",
-                                      title = NULL,
-                                      footnote = NULL,
-                                      output = getOption("discRD.table_output"),
-                                      size = getOption("discRD.table_fontsize"),
-                                      digits = 3,
-                                      ...) {
+rdtab.local_random_test <- function(object,
+                                    ylab,
+                                    outcome_lab = "Outcomes",
+                                    meanlab = "Mean",
+                                    selab = "S.E.",
+                                    nlab = "N",
+                                    meandiff_lab = "Mean difference",
+                                    plab = "P-value",
+                                    treat_header = "Treated",
+                                    control_header = "Control",
+                                    title = NULL,
+                                    footnote = NULL,
+                                    output = getOption("discRD.table_output"),
+                                    size = getOption("discRD.table_fontsize"),
+                                    digits = 3,
+                                    ...) {
   res <- object$estimate
   data <- lapply(res, function(l) {
     data.frame(
@@ -212,7 +211,6 @@ tabular.local_random_test <- function(object,
 #' @importFrom flextable hline_bottom
 #' @importFrom flextable fontsize
 #' @importFrom flextable autofit
-#' @method tabular global_lm
 #' @export
 #' @examples
 #' \dontrun{
@@ -244,18 +242,18 @@ tabular.local_random_test <- function(object,
 #'   )
 #' }
 #'
-tabular.global_lm <- function(object,
-                              ylab,
-                              dlab = "treated",
-                              olab = "Order of polynomial",
-                              covariate_labs,
-                              stars = c("***" = .01, "**" = .05, "*" = .1),
-                              title = NULL,
-                              footnote = NULL,
-                              output = getOption("discRD.table_output"),
-                              fontsize = getOption("discRD.table_fontsize"),
-                              digits = 3,
-                              ...) {
+rdtab.list_global_lm <- function(object,
+                                 ylab,
+                                 dlab = "treated",
+                                 olab = "Order of polynomial",
+                                 covariate_labs,
+                                 stars = c("***" = .01, "**" = .05, "*" = .1),
+                                 title = NULL,
+                                 footnote = NULL,
+                                 output = getOption("discRD.table_output"),
+                                 fontsize = getOption("discRD.table_fontsize"),
+                                 digits = 3,
+                                 ...) {
   # Step 1: Create add_rows tabulation
   xlist <- lapply(object$model.outline$covmod, all.vars)
   base_addtab <- data.frame(x = unique(unlist(xlist)))
@@ -488,7 +486,6 @@ tabular.global_lm <- function(object,
 #' @importFrom flextable hline_bottom
 #' @importFrom flextable fontsize
 #' @importFrom flextable autofit
-#' @method tabular local_lm
 #' @export
 #' @examples
 #' \dontrun{
@@ -520,17 +517,17 @@ tabular.global_lm <- function(object,
 #'   )
 #' }
 #'
-tabular.local_lm <- function(object,
-                              ylab,
-                              dlab = "treated",
-                              olab = "Order of polynomial",
-                              stars = c("***" = .01, "**" = .05, "*" = .1),
-                              title = NULL,
-                              footnote = NULL,
-                              output = getOption("discRD.table_output"),
-                              fontsize = getOption("discRD.table_fontsize"),
-                              digits = 3,
-                              ...) {
+rdtab.local_lm <- function(object,
+                           ylab,
+                           dlab = "treated",
+                           olab = "Order of polynomial",
+                           stars = c("***" = .01, "**" = .05, "*" = .1),
+                           title = NULL,
+                           footnote = NULL,
+                           output = getOption("discRD.table_output"),
+                           fontsize = getOption("discRD.table_fontsize"),
+                           digits = 3,
+                           ...) {
   # Step 1: Create add_rows tabulation
   addtab <- data.frame(
     t(c(olab, as.character(object$model.outline$order)))

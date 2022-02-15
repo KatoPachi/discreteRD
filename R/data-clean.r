@@ -6,6 +6,7 @@
 #' @param subset subset condition.
 #' @param weights weight variable.
 #' @param cluster cluster variable.
+#' @param order order of polynomial.
 #' @param cutoff numeric of cutoff point.
 #'   If missing, search `option("discRD.cutoff")`
 #' @param assign assignment rule of treatment.
@@ -33,7 +34,7 @@
 #' raw <- data.frame(y, bin, running, cov1, cov2, w)
 #'
 #' set_optDiscRD(discRD.cutoff = 50, discRD.assign = "smaller")
-#' a <- clean_rd_data(y ~ running + cov1, data = raw, weights = w)
+#' a <- clean_rd_data(y ~ running + cov1, data = raw, weights = w, order = 2)
 #' str(a)
 #' }
 #'
@@ -44,6 +45,7 @@ clean_rd_data <- function(basemod,
                           subset,
                           weights,
                           cluster,
+                          order = 1,
                           cutoff,
                           assign) {
   ## make formula
@@ -98,6 +100,13 @@ clean_rd_data <- function(basemod,
 
   usedt <- clean
   usedt$x <- usedt[, running] - cutoff
+
+  if (order > 1) {
+    for (j in seq(2, order)) {
+      lab <- paste0("x", j)
+      usedt[[lab]] <- usedt$x ^ j
+    }
+  }
 
   if (assign == "greater") {
     usedt$d <- ifelse(usedt$x >= 0, 1, 0)

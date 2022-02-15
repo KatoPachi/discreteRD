@@ -14,7 +14,7 @@ recover_data <- function(object, ...) {
 #' @name recover_data
 #' @export
 #'
-recover_data.global_lm <- function(object, modnum) {
+recover_data.list_global_lm <- function(object, modnum) {
   # result list
   use_result <- object$result[[modnum]]
 

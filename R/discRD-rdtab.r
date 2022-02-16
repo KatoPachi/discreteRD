@@ -1,31 +1,27 @@
-#' Output Table of Empirical Analysis for Discrete RD
-#'
-#' @param \dots some arguments.
-#'   See [tabular.local_random_test()] for arguments of "local_random" class.
-#'   See [tabular.global_lm()]
-#'   for arguments of "discRD_global_lm" class.
-#'
+#' Output Table of Regression Discontinuity Design
 #' @export
 #'
-rdtab <- function(...) {
+rdtab <- function(object, ...) {
   UseMethod("rdtab")
 }
 
-#' Output Table for Local Random Approach
 #'
-#' @param object object with "local_random_test" class
-#' @param ylab string vector with outcome labels.
-#'   Specify c("original label" = "new label", ...)
-#' @param outcome_lab string of label of outcome column.
-#' @param meanlab string of label of columns showing average.
-#' @param selab string of label of columns showing standard error.
-#' @param nlab string of label of columns showing number of observations.
-#' @param meandiff_lab string of label of columns showing
-#'   mean difference.
-#' @param plab string of label of columns showing p-value of
-#'   t-test (or permutation test).
-#' @param treat_header string of label of treatment
-#' @param control_header string of label of control
+#' @name rdtab
+#'
+#' @param object output object
+#' @param ylab named string vector with label of outcome variables
+#'   specified by c("original label" = "new label", ...).
+#' @param col_lab named list of column labels (only "list_local_random" class)
+#'   \itemize{
+#'     \item `y`: outcome column
+#'     \item `mean`: columns showing average
+#'     \item `se`: columns showing standard error
+#'     \item `n`: columns showing number of obsrevations
+#'     \item `mean.diff`: columns showing mean difference
+#'     \item `plab`: columns of showing p-value of t-test or permutation test
+#'     \item `treat`: label of treatment
+#'     \item `control`: label of control
+#'   }
 #' @param title string of table title
 #' @param footnote string of footnote
 #' @param output string of output format
@@ -75,19 +71,21 @@ rdtab <- function(...) {
 #'   "if the running variable is 50 or less."
 #' )
 #'
-#' local_random_test(data = raw, bw = c(-5, 5)) %>%
-#'   rdtab(ylab, digits = 2, footnote = footnote)
+#' loc <- local_random_test(data = raw, bw = c(-5, 5))
+#' rdtab(loc, ylab, digits = 2, footnote = footnote)
 #'
 rdtab.list_local_random <- function(object,
                                     ylab,
-                                    outcome_lab = "Outcomes",
-                                    meanlab = "Mean",
-                                    selab = "S.E.",
-                                    nlab = "N",
-                                    meandiff_lab = "Mean difference",
-                                    plab = "P-value",
-                                    treat_header = "Treated",
-                                    control_header = "Control",
+                                    col_lab = list(
+                                      y = "Outcomes",
+                                      mean = "Mean",
+                                      se = "S.E.",
+                                      n = "N",
+                                      mean.diff = "Mean difference",
+                                      p = "P-value",
+                                      treat = "Treated",
+                                      control = "Control"
+                                    ),
                                     title = NULL,
                                     footnote = NULL,
                                     output = getOption("discRD.table_output"),
@@ -106,24 +104,27 @@ rdtab.list_local_random <- function(object,
       ))
   }
 
+  # column label
+  lab <- unlist(col_lab)
+
   rawvalue <- function(x) x
   tab <- modelsummary::datasummary(
-    (Heading(outcome_lab, character.only = TRUE) * outcome) ~ rawvalue * (
-      (Heading(nlab, character.only = TRUE) * n1 * Format(digits = 0)) +
-      (Heading(meanlab, character.only = TRUE) * mean_y1) +
-      (Heading(selab, character.only = TRUE) * se_y1) +
-      (Heading(nlab, character.only = TRUE) * n0 * Format(digits = 0)) +
-      (Heading(meanlab, character.only = TRUE) * mean_y0) +
-      (Heading(selab, character.only = TRUE) * se_y0) +
-      (Heading(meandiff_lab, character.only = TRUE) * mean_diff) +
-      (Heading(plab, character.only = TRUE) * p)
+    (Heading(lab["y"], character.only = TRUE) * outcome) ~ rawvalue * (
+      (Heading(lab["n"], character.only = TRUE) * n1 * Format(digits = 0)) +
+      (Heading(lab["mean"], character.only = TRUE) * mean_y1) +
+      (Heading(lab["se"], character.only = TRUE) * se_y1) +
+      (Heading(lab["n"], character.only = TRUE) * n0 * Format(digits = 0)) +
+      (Heading(lab["mean"], character.only = TRUE) * mean_y0) +
+      (Heading(lab["se"], character.only = TRUE) * se_y0) +
+      (Heading(lab["mean.diff"], character.only = TRUE) * mean_diff) +
+      (Heading(lab["p"], character.only = TRUE) * p)
     ),
     data = data,
     align = "lcccccccc",
     title = title, output = output, fmt = digits
   )
 
-  header <- c(" ", rep(treat_header, 3), rep(control_header, 3), " ", " ")
+  header <- c(" ", rep(lab["treat"], 3), rep(lab["control"], 3), " ", " ")
   parse_header <- rle(header)
   head_length <- parse_header$lengths
   names(head_length) <- parse_header$values
@@ -151,10 +152,8 @@ rdtab.list_local_random <- function(object,
   }
 }
 
-#' Output Table for Global Local Polynomials
 #'
-#' @param object object with "global_lm" class
-#' @param ylab a named string vector of outcome variables
+#' @name rdtab
 #' @param dlab a string of label of treatment variable
 #' @param olab a string of label of "Order of polynomial"
 #' @param covariate_labs list.
@@ -170,15 +169,6 @@ rdtab.list_local_random <- function(object,
 #'   `"***" = 0.01` means show *** if p-value is less than or equal to 0.01.
 #' @param gof_omit string regular expression.
 #'   Omits all matching gof statistics from the table.
-#' @param title a string of title
-#' @param footnote a string of footnote
-#' @param output a string of output format.
-#'   If missing, find `options("discRD.table_output")`.
-#' @param fontsize numeric of font size.
-#'   If missing, find `options("discRD.table_fontsize")`.
-#' @param digits numeric.
-#'   the number of digits to keep after the period.
-#' @param \dots Other arguments to pass to `kableExtra::kable_styling`
 #'
 #' @importFrom magrittr %>%
 #' @importFrom modelsummary modelsummary
@@ -202,34 +192,18 @@ rdtab.list_local_random <- function(object,
 #' @importFrom flextable autofit
 #' @export
 #' @examples
-#' \dontrun{
-#' running <- sample(1:100, size = 1000, replace = TRUE)
-#' cov1 <- rnorm(1000, sd = 2); cov2 <- rnorm(1000, mean = -1)
-#' y0 <- running + cov1 + cov2 + rnorm(1000, sd = 10)
-#' y1 <- 2 + 1.5 * running + cov1 + cov2 + rnorm(1000, sd = 10)
-#' y <- ifelse(running <= 50, y1, y0)
-#' bin <- ifelse(y > mean(y), 1, 0)
-#' w <- sample(c(1, 0.5), size = 1000, replace = TRUE)
-#' raw <- data.frame(y, bin, running, cov1, cov2, w)
 #'
-#' set_optDiscRD(
-#'   y + bin ~ running,
-#'   xmod = ~ cov1 + cov2,
-#'   discRD.cutoff = 50,
-#'   discRD.assign = "smaller"
+#' set_optDiscRD(xmod = ~ cov1 + cov2)
+#' 
+#' est <- global_lm(data = raw)
+#' rdtab(
+#'   est,
+#'   title = "Estimate Local ATE by Global Polynomial Fitting",
+#'   ylab = c("y" = "Simulated Outcome", "bin" = "Simulated Outcome > 0"),
+#'   dlab = "Treatment",
+#'   covariate_labs = list("Covariates" = c("cov1", "cov2")),
+#'   footnote = "***: p < 0.01, **: p < 0.05, *: p < 0.1"
 #' )
-#'
-#' library(magrittr)
-#'
-#' global_lm(data = raw) %>%
-#'   tabular(
-#'     title = "Estimate Local ATE by Global Polynomial Fitting",
-#'     ylab = c("y" = "Simulated Outcome", "bin" = "Simulated Outcome > 0"),
-#'     dlab = "Treatment",
-#'     covariate_labs = list("Covariates" = c("cov1", "cov2")),
-#'     footnote = "***: p < 0.01, **: p < 0.05, *: p < 0.1"
-#'   )
-#' }
 #'
 rdtab.list_global_lm <- function(object,
                                  ylab,
@@ -241,7 +215,7 @@ rdtab.list_global_lm <- function(object,
                                  title = NULL,
                                  footnote = NULL,
                                  output = getOption("discRD.table_output"),
-                                 fontsize = getOption("discRD.table_fontsize"),
+                                 size = getOption("discRD.table_fontsize"),
                                  digits = 3,
                                  ...) {
   # Step 1: Create add_rows tabulation
@@ -361,7 +335,7 @@ rdtab.list_global_lm <- function(object,
       booktabs = TRUE, linesep = "", escape = FALSE,
     )
 
-    ktab <- kableExtra::kable_styling(ktab, font_size = fontsize, ...)
+    ktab <- kableExtra::kable_styling(ktab, font_size = size, ...)
 
     for (i in group_id) {
       numrow <- seq_len(nrow(tab))
@@ -424,7 +398,7 @@ rdtab.list_global_lm <- function(object,
       flextable::hline_bottom(
         part = "body", border = officer::fp_border()
       ) %>%
-      flextable::fontsize(size = fontsize, part = "all") %>%
+      flextable::fontsize(size = size, part = "all") %>%
       flextable::autofit()
 
   } else {
@@ -438,25 +412,8 @@ rdtab.list_global_lm <- function(object,
   }
 }
 
-#' Output Table for Local Polynomials
 #'
-#' @param object object with "global_lm" class
-#' @param ylab a named string vector of outcome variables
-#' @param dlab a string of label of treatment variable
-#' @param olab a string of label of "Order of polynomial"
-#' @param stars a named numeric vector to indicate statistical significance.
-#'   `"***" = 0.01` means show *** if p-value is less than or equal to 0.01.
-#' @param gof_omit string regular expression.
-#'   Omits all matching gof statistics from the table.
-#' @param title a string of title
-#' @param footnote a string of footnote
-#' @param output a string of output format.
-#'   If missing, find `options("discRD.table_output")`.
-#' @param fontsize numeric of font size.
-#'   If missing, find `options("discRD.table_fontsize")`.
-#' @param digits numeric.
-#'   the number of digits to keep after the period.
-#' @param \dots Other arguments to pass to `kableExtra::kable_styling`
+#' @name rdtab
 #'
 #' @importFrom magrittr %>%
 #' @importFrom modelsummary modelsummary
@@ -480,34 +437,14 @@ rdtab.list_global_lm <- function(object,
 #' @importFrom flextable autofit
 #' @export
 #' @examples
-#' \dontrun{
-#' running <- sample(1:100, size = 1000, replace = TRUE)
-#' cov1 <- rnorm(1000, sd = 2); cov2 <- rnorm(1000, mean = -1)
-#' y0 <- running + cov1 + cov2 + rnorm(1000, sd = 10)
-#' y1 <- 2 + 1.5 * running + cov1 + cov2 + rnorm(1000, sd = 10)
-#' y <- ifelse(running <= 50, y1, y0)
-#' bin <- ifelse(y > mean(y), 1, 0)
-#' w <- sample(c(1, 0.5), size = 1000, replace = TRUE)
-#' raw <- data.frame(y, bin, running, cov1, cov2, w)
-#'
-#' set_optDiscRD(
-#'   y + bin ~ running,
-#'   xmod = ~ cov1 + cov2,
-#'   discRD.cutoff = 50,
-#'   discRD.assign = "smaller"
+#' locest <- local_lm(data = raw, kernel = "uniform", bw = 3)
+#' rdtab(
+#'   locest,
+#'   title = "Estimate Local ATE by Local Polynomial Fitting",
+#'   ylab = c("y" = "Simulated Outcome", "bin" = "Simulated Outcome > 0"),
+#'   dlab = "Treatment",
+#'   footnote = "***: p < 0.01, **: p < 0.05, *: p < 0.1"
 #' )
-#'
-#' library(magrittr)
-#'
-#' local_lm(data = raw) %>%
-#'   tabular(
-#'     title = "Estimate Local ATE by Local Polynomial Fitting",
-#'     ylab = c("y" = "Simulated Outcome", "bin" = "Simulated Outcome > 0"),
-#'     dlab = "Treatment",
-#'     covariate_labs = list("Covariates" = c("cov1", "cov2")),
-#'     footnote = "***: p < 0.01, **: p < 0.05, *: p < 0.1"
-#'   )
-#' }
 #'
 rdtab.list_local_lm <- function(object,
                                 ylab,
@@ -518,7 +455,7 @@ rdtab.list_local_lm <- function(object,
                                 title = NULL,
                                 footnote = NULL,
                                 output = getOption("discRD.table_output"),
-                                fontsize = getOption("discRD.table_fontsize"),
+                                size = getOption("discRD.table_fontsize"),
                                 digits = 3,
                                 ...) {
   # Step 1: Create add_rows tabulation
@@ -592,7 +529,7 @@ rdtab.list_local_lm <- function(object,
       booktabs = TRUE, linesep = "", escape = FALSE,
     )
 
-    ktab <- kableExtra::kable_styling(ktab, font_size = fontsize, ...)
+    ktab <- kableExtra::kable_styling(ktab, font_size = size, ...)
 
     for (i in group_id) {
       numrow <- seq_len(nrow(tab))
@@ -655,7 +592,7 @@ rdtab.list_local_lm <- function(object,
       flextable::hline_bottom(
         part = "body", border = officer::fp_border()
       ) %>%
-      flextable::fontsize(size = fontsize, part = "all") %>%
+      flextable::fontsize(size = size, part = "all") %>%
       flextable::autofit()
 
   } else {

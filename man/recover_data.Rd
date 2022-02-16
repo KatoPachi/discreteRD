@@ -8,12 +8,12 @@
 \usage{
 recover_data(object, ...)
 
-\method{recover_data}{list_global_lm}(object, modnum)
+\method{recover_data}{list_global_lm}(object, modnum, ...)
 
-\method{recover_data}{list_local_lm}(object, modnum)
+\method{recover_data}{list_local_lm}(object, modnum, ...)
 }
 \arguments{
-\item{object}{object with global_lm class}
+\item{object}{estimation object}
 
 \item{\dots}{other arguments}
 

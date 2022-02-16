@@ -9,12 +9,11 @@ recover_data <- function(object, ...) {
 }
 
 #'
-#' @param object object with global_lm class
-#' @param modnum numeric. which model you use.
 #' @name recover_data
+#' @param modnum numeric. which model you use.
 #' @export
 #'
-recover_data.list_global_lm <- function(object, modnum) {
+recover_data.list_global_lm <- function(object, modnum, ...) {
   # result list
   use_result <- object$result[[modnum]]
 
@@ -43,7 +42,7 @@ recover_data.list_global_lm <- function(object, modnum) {
 #' @name recover_data
 #' @export
 #'
-recover_data.list_local_lm <- function(object, modnum) {
+recover_data.list_local_lm <- function(object, modnum, ...) {
   d <- recover_data.list_global_lm(object, modnum)
   res <- object$result[[modnum]]
 

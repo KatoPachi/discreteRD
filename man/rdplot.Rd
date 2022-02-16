@@ -14,7 +14,7 @@ rdplot(object, ...)
   treat_label = c("treated", "control"),
   ate_label_size = 5,
   ate_label_digits = 3,
-  ate_label_name = "Local ATE",
+  ate_label_format,
   outcome_label,
   ylim,
   vjust = 0,
@@ -33,7 +33,7 @@ rdplot(object, ...)
   treat_label = c("treated", "control"),
   ate_label_size = 5,
   ate_label_digits = 3,
-  ate_label_name = "Local ATE",
+  ate_label_format,
   outcome_label,
   ylim,
   vjust = 0,
@@ -43,6 +43,7 @@ rdplot(object, ...)
   patchwork = TRUE,
   ncol = NULL,
   nrow = NULL,
+  force = TRUE,
   ...
 )
 }
@@ -59,7 +60,18 @@ rdplot(object, ...)
 
 \item{ate_label_digits}{decimal places of in-plot ATE result.}
 
-\item{ate_label_name}{label of in-plot ATE result.}
+\item{ate_label_format}{string of label format of in-plot ATE result.
+The format produces labels according to a unique grammar.
+If you want to embed a numerical value related to the estimation result,
+you need to enclose it in {}.
+\itemize{
+\item \code{{estimate}}: embed coefficient value (Local ATE)
+\item \code{{std.error}}: embed standard error of coefficient
+\item \code{{statistic}}: embed z-score of coefficient
+\item \code{{p.value}}: embed p-value of coefficient
+\item \code{{star}}: show *** if p-value <= 0.01;
+** if p-value <= 0.05; * if p-value <= 0.1
+}}
 
 \item{outcome_label}{Outcome label in plot title}
 
@@ -81,6 +93,8 @@ argument of \code{patchwork::wrap_plots}}
 
 \item{nrow}{the dimensions of the grid to create.
 argument of \code{patchwork::wrap_plots}}
+
+\item{force}{logical. Whether to ignore error about estimation}
 }
 \description{
 Flexible RD Plot
@@ -103,7 +117,7 @@ set_optDiscRD(
 
 est <- global_lm(data = raw, weights = w)
 
-gplot(
+rdplot(
   est,
   usemod = c(1, 2),
   treat_label = c("Treated", "Control"),
@@ -112,8 +126,7 @@ gplot(
     "2" = "Simulated outcome > 0"
   ),
   ylab = "Weighted Average",
-  ate_label_size = 4,
-  ate_label_name = "RD estimate"
+  ate_label_size = 4
 )
 
 nonpara <- local_lm(

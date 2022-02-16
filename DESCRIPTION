@@ -27,4 +27,5 @@ Imports:
     patchwork (>= 1.1.1),
     rlang (>= 0.4.12),
     stats,
-    tables (>= 0.9.6)
+    tables (>= 0.9.6),
+    tibble (>= 3.1.6)

@@ -54,19 +54,21 @@ label_maker <- function(object, label, digits = 3) {
 #' @importFrom ggplot2 ylim
 #'
 #'
-gplot_internal_cutoff <- function(aggregate,
-                                  predict1,
-                                  predict0,
-                                  cutoff,
-                                  ate_label,
-                                  ate_label_size = 5,
-                                  outcome_label,
-                                  ylim,
-                                  vjust = 0,
-                                  hjust = 0,
-                                  xlab = "Running variable",
-                                  ylab = "Average",
-                                  ...) {
+rdplot_internal_cutoff <- function(aggregate,
+                                   predict1,
+                                   predict0,
+                                   cutoff,
+                                   ate_label,
+                                   ate_label_size = 5,
+                                   outcome_label,
+                                   ylim,
+                                   vjust = 0,
+                                   hjust = 0,
+                                   xlab = "Running variable",
+                                   ylab = "Average",
+                                   ...) {
+  x <- outcome <- d <- yhat1 <- yhat0 <- NULL
+
   title <- if (missing(outcome_label)) NULL else outcome_label
 
   g <- ggplot2::ggplot(aggregate, ggplot2::aes(x = x, y = outcome)) +

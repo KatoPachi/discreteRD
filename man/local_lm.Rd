@@ -83,7 +83,7 @@ set_optDiscRD(
   discRD.assign = "smaller"
 )
 
-est <- local_lm(data = raw, bw = 3, kernel = "uniform")
+local <- local_lm(data = raw, bw = 3, kernel = "uniform")
 str(local_lm(submod = 1, data = raw, bw = 3, kernel = "uniform"))
 str(local_lm(submod = 1, order = 3, data = raw, bw = 3, kernel = "uniform"))
 str(local_lm(data = raw, cutoff = 30, bw = 3, kernel = "uniform"))

@@ -11,7 +11,18 @@ rdplot <- function(object, ...) {
 #' @param treat_label string vector of treatment and control label
 #' @param ate_label_size In-plot text size
 #' @param ate_label_digits decimal places of in-plot ATE result.
-#' @param ate_label_name label of in-plot ATE result.
+#' @param ate_label_format string of label format of in-plot ATE result.
+#'   The format produces labels according to a unique grammar.
+#'   If you want to embed a numerical value related to the estimation result,
+#'   you need to enclose it in {}.
+#'   \itemize{
+#'     \item `{estimate}`: embed coefficient value (Local ATE)
+#'     \item `{std.error}`: embed standard error of coefficient
+#'     \item `{statistic}`: embed z-score of coefficient
+#'     \item `{p.value}`: embed p-value of coefficient
+#'     \item `{star}`: show *** if p-value <= 0.01;
+#'       ** if p-value <= 0.05; * if p-value <= 0.1
+#'   }
 #' @param outcome_label Outcome label in plot title
 #' @param ylim numeric vector of limits of y-axis
 #' @param vjust numeric. Adjust in-plot text vertically
@@ -26,7 +37,8 @@ rdplot <- function(object, ...) {
 #'   argument of `patchwork::wrap_plots`
 #' @param \dots arguments of [simplegg()]
 #'
-#' @importFrom stats setNames
+#' @importFrom stats aggregate
+#' @importFrom stats predict
 #' @importFrom patchwork wrap_plots
 #' @importFrom patchwork plot_layout
 #' @importFrom ggplot2 theme
@@ -53,7 +65,7 @@ rdplot <- function(object, ...) {
 #'
 #' est <- global_lm(data = raw, weights = w)
 #'
-#' gplot(
+#' rdplot(
 #'   est,
 #'   usemod = c(1, 2),
 #'   treat_label = c("Treated", "Control"),
@@ -62,8 +74,7 @@ rdplot <- function(object, ...) {
 #'     "2" = "Simulated outcome > 0"
 #'   ),
 #'   ylab = "Weighted Average",
-#'   ate_label_size = 4,
-#'   ate_label_name = "RD estimate"
+#'   ate_label_size = 4
 #' )
 #'
 #' @name rdplot
@@ -85,7 +96,7 @@ rdplot.list_global_lm <- function(object,
                                   nrow = NULL,
                                   ...) {
   # observed data aggregated by mass points
-  i <- NULL
+  x <- i <- NULL
   vars <- c("outcome", "weights", "d")
   aggregate_quo <- rlang::quo({
     data <- recover_data(object, i)
@@ -161,7 +172,7 @@ rdplot.list_global_lm <- function(object,
     args <- append(args, eval_pargs)
 
     # draw plot
-    do.call("gplot_internal_cutoff", append(args, tmparg))
+    do.call("rdplot_internal_cutoff", append(args, tmparg))
   })
 
   if (patchwork) {
@@ -175,6 +186,16 @@ rdplot.list_global_lm <- function(object,
 
 #'
 #' @name rdplot
+#' @param force logical. Whether to ignore error about estimation
+#'
+#' @importFrom stats aggregate
+#' @importFrom patchwork wrap_plots
+#' @importFrom patchwork plot_layout
+#' @importFrom ggplot2 theme
+#' @importFrom rlang quo
+#' @importFrom rlang enquos
+#' @importFrom rlang quo_is_missing
+#' @importFrom rlang eval_tidy
 #' @export
 #' @examples
 #' nonpara <- local_lm(
@@ -287,7 +308,7 @@ rdplot.list_local_lm <- function(object,
     args <- append(args, eval_pargs)
 
     # draw plot
-    do.call("gplot_internal_cutoff", append(args, tmparg))
+    do.call("rdplot_internal_cutoff", append(args, tmparg))
   })
 
   if (patchwork) {

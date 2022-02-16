@@ -2,16 +2,161 @@
 % Please edit documentation in R/discRD-rdtab.r
 \name{rdtab}
 \alias{rdtab}
-\title{Output Table of Empirical Analysis for Discrete RD}
+\alias{rdtab.list_local_random}
+\alias{rdtab.list_global_lm}
+\alias{rdtab.list_local_lm}
+\title{Output Table of Regression Discontinuity Design}
 \usage{
-rdtab(...)
+rdtab(object, ...)
+
+\method{rdtab}{list_local_random}(
+  object,
+  ylab,
+  col_lab = list(y = "Outcomes", mean = "Mean", se = "S.E.", n = "N", mean.diff =
+    "Mean difference", p = "P-value", treat = "Treated", control = "Control"),
+  title = NULL,
+  footnote = NULL,
+  output = getOption("discRD.table_output"),
+  size = getOption("discRD.table_fontsize"),
+  digits = 3,
+  ...
+)
+
+\method{rdtab}{list_global_lm}(
+  object,
+  ylab,
+  dlab = "treated",
+  olab = "Order of polynomial",
+  covariate_labs,
+  stars = c(`***` = 0.01, `**` = 0.05, `*` = 0.1),
+  gof_omit = "se",
+  title = NULL,
+  footnote = NULL,
+  output = getOption("discRD.table_output"),
+  size = getOption("discRD.table_fontsize"),
+  digits = 3,
+  ...
+)
+
+\method{rdtab}{list_local_lm}(
+  object,
+  ylab,
+  dlab = "treated",
+  olab = "Order of polynomial",
+  stars = c(`***` = 0.01, `**` = 0.05, `*` = 0.1),
+  gof_omit = "se",
+  title = NULL,
+  footnote = NULL,
+  output = getOption("discRD.table_output"),
+  size = getOption("discRD.table_fontsize"),
+  digits = 3,
+  ...
+)
 }
 \arguments{
-\item{\dots}{some arguments.
-See \code{\link[=tabular.local_random_test]{tabular.local_random_test()}} for arguments of "local_random" class.
-See \code{\link[=tabular.global_lm]{tabular.global_lm()}}
-for arguments of "discRD_global_lm" class.}
+\item{object}{output object}
+
+\item{\dots}{Other arguments to pass to \code{kableExtra::kable_styling}}
+
+\item{ylab}{named string vector with label of outcome variables
+specified by c("original label" = "new label", ...).}
+
+\item{col_lab}{named list of column labels (only "list_local_random" class)
+\itemize{
+\item \code{y}: outcome column
+\item \code{mean}: columns showing average
+\item \code{se}: columns showing standard error
+\item \code{n}: columns showing number of obsrevations
+\item \code{mean.diff}: columns showing mean difference
+\item \code{plab}: columns of showing p-value of t-test or permutation test
+\item \code{treat}: label of treatment
+\item \code{control}: label of control
+}}
+
+\item{title}{string of table title}
+
+\item{footnote}{string of footnote}
+
+\item{output}{string of output format
+(default is getOption("discRD.table_output"))}
+
+\item{size}{numeric of font size
+(default is getOption("discRD.table_fontsize"))}
+
+\item{digits}{numeric of number of decimal places to display
+(Default is 3).}
+
+\item{dlab}{a string of label of treatment variable}
+
+\item{olab}{a string of label of "Order of polynomial"}
+
+\item{covariate_labs}{list.
+You can specify how to display information about
+whether you are controlling a variable that is not displayed by a factor.
+For example,
+\code{list("label 1" = "x1")} changes the label of "x1" to "label 1".
+Also, when specified as \code{list("label" = c ("x1", "x2"))},
+if x1 and x2 are not controlled or
+the coefficients are not displayed in all models,
+"x1" and "x2" labels are aggregated into one line with the name "label".}
+
+\item{stars}{a named numeric vector to indicate statistical significance.
+\code{"***" = 0.01} means show *** if p-value is less than or equal to 0.01.}
+
+\item{gof_omit}{string regular expression.
+Omits all matching gof statistics from the table.}
 }
 \description{
-Output Table of Empirical Analysis for Discrete RD
+Output Table of Regression Discontinuity Design
+}
+\examples{
+running <- sample(1:100, size = 1000, replace = TRUE)
+cov1 <- rnorm(1000, sd = 2); cov2 <- rnorm(1000, mean = -1)
+y0 <- running + cov1 + cov2 + rnorm(1000)
+y1 <- 2 + 1.5 * running + cov1 + cov2 + rnorm(1000)
+y <- ifelse(running <= 50, y1, y0)
+bin <- ifelse(y > mean(y), 1, 0)
+raw <- data.frame(y, bin, running, cov1, cov2)
+
+set_optDiscRD(
+  y + bin ~ running,
+  discRD.cutoff = 50,
+  discRD.assign = "smaller"
+)
+
+library(modelsummary)
+library(magrittr)
+
+ylab <- c("y" = "Simulated Outcome", "bin" = "Binary")
+footnote <- paste0(
+  "Observations with running variables of -45 to 55 were used.",
+  "The treatment variable is determined to take 1",
+  "if the running variable is 50 or less."
+)
+
+loc <- local_random_test(data = raw, bw = c(-5, 5))
+rdtab(loc, ylab, digits = 2, footnote = footnote)
+
+
+set_optDiscRD(xmod = ~ cov1 + cov2)
+
+est <- global_lm(data = raw)
+rdtab(
+  est,
+  title = "Estimate Local ATE by Global Polynomial Fitting",
+  ylab = c("y" = "Simulated Outcome", "bin" = "Simulated Outcome > 0"),
+  dlab = "Treatment",
+  covariate_labs = list("Covariates" = c("cov1", "cov2")),
+  footnote = "***: p < 0.01, **: p < 0.05, *: p < 0.1"
+)
+
+locest <- local_lm(data = raw, kernel = "uniform", bw = 3)
+rdtab(
+  locest,
+  title = "Estimate Local ATE by Local Polynomial Fitting",
+  ylab = c("y" = "Simulated Outcome", "bin" = "Simulated Outcome > 0"),
+  dlab = "Treatment",
+  footnote = "***: p < 0.01, **: p < 0.05, *: p < 0.1"
+)
+
 }

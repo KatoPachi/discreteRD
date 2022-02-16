@@ -13,7 +13,9 @@ clean_rd_data(
   cluster,
   order = 1,
   cutoff,
-  assign
+  assign,
+  bw,
+  global = TRUE
 )
 }
 \arguments{
@@ -40,6 +42,15 @@ treated whose running variable is greater than or equal to cutoff.
 If "smaller",
 treated whose running variable is less than or equal to cutoff.
 If missing, search \code{option("discRD.assign")}}
+
+\item{bw}{numeric vector of bandwidth.
+If specified, use data
+whose running variables are within this range will be used.
+If missing, use data from treatment and control groups
+where the running variable is closest to the cutoff}
+
+\item{global}{logical (default is FALSE).
+Whether to use all observations.}
 }
 \description{
 Data Shape

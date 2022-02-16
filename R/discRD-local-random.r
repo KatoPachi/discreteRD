@@ -197,10 +197,6 @@ local_random_test <- function(basemod,
                               bootp,
                               cutoff,
                               assign) {
-  # collect arguments
-  arg <- as.list(match.call())[-1]
-  arg$data <- data
-
   # check basemod
   if (missing(basemod)) basemod <- getOption("discRD.basemod")
   if (!is.list(basemod)) basemod <- list(basemod)
@@ -208,42 +204,45 @@ local_random_test <- function(basemod,
   if (missing(submod)) submod <- seq_len(length(basemod))
   usemod <- basemod[submod]
 
-  # output list
-  output <- list()
+  # check arguments for cleaning data
+  dtarg <- rlang::enquos(
+    weights = weights,
+    subset = subset
+  )
+  dtarg <- Filter(Negate(rlang::quo_is_missing), dtarg)
+  dtarg$data <- data
+  if (!missing(cutoff)) dtarg$cutoff <- cutoff
+  if (!missing(assign)) dtarg$assign <- assign
+  if (!missing(global)) dtarg$global <- global
+  if (!missing(bw)) dtarg$bw <- bw
 
-  # check arguments
-  dt_arg_list_name <- c("data", "weights", "subset", "cutoff", "assign")
-  dtarg <- arg[names(arg) %in% dt_arg_list_name]
-
-  clean <- lapply(usemod, function(m) {
-    dtarg$basemod <- m
-    clean <- do.call("clean_rd_data", dtarg)
-  })
-
-  output$RD.info <- clean[[1]]$RD.info
-
-  bw_arg_list_name <- c("bw", "global")
-  bwarg <- arg[names(arg) %in% bw_arg_list_name]
-
-  # cleaning data
-  dtlist <- lapply(clean, function(m) {
-    bwarg$data <- m
-    do.call("data_bwfilter", bwarg)
-  })
-
-  output$bandwidth <- dtlist[[1]]$bwinfo
+  # check arguments for test
+  estarg <- list()
+  if (!missing(bootse)) estarg$bootse <- bootse
+  if (!missing(bootp)) estarg$bootp <- bootp
 
   # run test
-  test_arg_list_name <- c("bootse", "bootp")
-  testarg <- arg[names(arg) %in% test_arg_list_name]
-  reslist <- lapply(seq_len(length(usemod)), function(i) {
-    testarg$basemod <- usemod[[i]]
-    testarg$data <- dtlist[[i]]$data
-    do.call("local_random_test_int", testarg)
+  est <- lapply(usemod, function(m) {
+    # cleaning data
+    dtarg$basemod <- m
+    clean <- do.call("clean_rd_data", dtarg)
+
+    # temporal output
+    temp <- list()
+    temp$RD.info <- clean$RD.info
+    temp$bandwidth <- clean$bw.subset
+
+    # run t-test / permutation test
+    estarg$basemod <- m
+    estarg$data <- clean$data
+    temp$estimate <- do.call("local_random_test_int", estarg)
+
+    # output
+    class(temp) <- "local_random"
+    temp
   })
 
-  # output
-  output$estimate <- reslist
-  class(output) <- append("local_random_test", class(output))
-  output
+  # final output
+  class(est) <- append("list_local_random", class(est))
+  est
 }

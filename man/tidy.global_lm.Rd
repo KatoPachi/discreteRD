@@ -3,6 +3,7 @@
 \name{tidy.global_lm}
 \alias{tidy.global_lm}
 \alias{tidy.local_lm}
+\alias{tidy.local_random}
 \alias{glance.global_lm}
 \alias{glance.local_lm}
 \title{Methods of tidy and glance}
@@ -10,6 +11,8 @@
 \method{tidy}{global_lm}(x, ...)
 
 \method{tidy}{local_lm}(x, ...)
+
+\method{tidy}{local_random}(x, ...)
 
 \method{glance}{global_lm}(x, ...)
 

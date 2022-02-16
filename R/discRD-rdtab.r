@@ -76,9 +76,9 @@ rdtab <- function(...) {
 #' )
 #'
 #' local_random_test(data = raw, bw = c(-5, 5)) %>%
-#'   tabular(ylab, digits = 2, footnote = footnote)
+#'   rdtab(ylab, digits = 2, footnote = footnote)
 #'
-rdtab.local_random_test <- function(object,
+rdtab.list_local_random <- function(object,
                                     ylab,
                                     outcome_lab = "Outcomes",
                                     meanlab = "Mean",
@@ -94,21 +94,8 @@ rdtab.local_random_test <- function(object,
                                     size = getOption("discRD.table_fontsize"),
                                     digits = 3,
                                     ...) {
-  res <- object$estimate
-  data <- lapply(res, function(l) {
-    data.frame(
-      outcome = l$outcome,
-      mean_y1 = l$observe$treat$mean,
-      se_y1 = l$observe$treat$se,
-      n1 = l$observe$treat$N,
-      mean_y0 = l$observe$control$mean,
-      se_y0 = l$observe$control$se,
-      n0 = l$observe$control$N,
-      mean_diff = l$local.ate$estimate,
-      p = l$local.ate$p.value
-    )
-  })
-
+  # extract result by data.frame
+  data <- lapply(object, tidy)
   data <- dplyr::bind_rows(data)
 
   if (!missing(ylab)) {

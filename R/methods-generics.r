@@ -26,6 +26,24 @@ tidy.local_lm <- function(x, ...) {
 }
 
 #'
+#' @export 
+#' @name tidy.global_lm
+tidy.local_random <- function(x, ...) {
+  x <- x$estimate
+  data.frame(
+    outcome = x$outcome,
+    mean_y1 = x$observe$treat$mean,
+    se_y1 = x$observe$treat$se,
+    n1 = x$observe$treat$N,
+    mean_y0 = x$observe$control$mean,
+    se_y0 = x$observe$control$se,
+    n0 = x$observe$control$N,
+    mean_diff = x$local.ate$estimate,
+    p = x$local.ate$p.value
+  )
+}
+
+#'
 #' @importFrom generics glance
 #' @export
 #' @name tidy.global_lm

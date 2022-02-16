@@ -15,6 +15,13 @@
 #'   If "smaller",
 #'   treated whose running variable is less than or equal to cutoff.
 #'   If missing, search `option("discRD.assign")`
+#' @param bw numeric vector of bandwidth.
+#'   If specified, use data
+#'   whose running variables are within this range will be used.
+#'   If missing, use data from treatment and control groups
+#'   where the running variable is closest to the cutoff
+#' @param global logical (default is FALSE).
+#'   Whether to use all observations.
 #'
 #' @importFrom stats update
 #' @importFrom stats na.omit
@@ -47,7 +54,9 @@ clean_rd_data <- function(basemod,
                           cluster,
                           order = 1,
                           cutoff,
-                          assign) {
+                          assign,
+                          bw,
+                          global = TRUE) {
   ## make formula
   mod <- basemod
   if (!missing(covmod)) { 
@@ -118,38 +127,24 @@ clean_rd_data <- function(basemod,
 
   usedt <- usedt[, names(usedt) != running]
 
-  list(
-    data = usedt,
-    RD.info = list(
-      running.variable = running,
-      cutoff = cutoff,
-      assignment = assign
-    )
+  # temporal output list
+  output <- list()
+  output$data <- usedt
+  output$RD.info <- list(
+    running.variable = running,
+    cutoff = cutoff,
+    assignment = assign
   )
-}
 
-#' Subset by Bandwidth
-#'
-#' @param data list created by `clean_rd_data`.
-#' @param bw numeric vector.
-#'   If one element in the vector,
-#'   we use data satisfying -abs(bw) <= x & x <= abs(bw).
-#'   If missing,
-#'   we use treated data and control data closest to cutoff.
-#' @param global logical.
-#'   Whether do you want to restrict data by bandwidth?
-#'
-data_bwfilter <- function(data,
-                          bw,
-                          global = FALSE) {
+  # subset by bandwidth if global = FALSE
   if (!global) {
     if (missing(bw)) {
-      if (data$RD.info$assignment == "greater") {
-        lwr <- max(data$data[data$data$d == 0, "x"])
+      if (assign == "greater") {
+        lwr <- max(usedt[usedt$d == 0, "x"])
         upr <- 0
-      } else if (data$RD.info$assignment == "smaller") {
+      } else if (assign == "smaller") {
         lwr <- 0
-        upr <- min(data$data[data$data$d == 0, "x"])
+        upr <- min(usedt[usedt$d == 0, "x"])
       }
     } else {
       if (length(bw) == 1) {
@@ -161,20 +156,12 @@ data_bwfilter <- function(data,
       }
     }
 
-    dt <- data$data
-    list(
-      data = dt[lwr <= dt$x & dt$x <= upr, ],
-      bwinfo = list(
-        global = FALSE,
-        bw = c(lwr, upr)
-      )
-    )
+    output$data <- usedt[lwr <= usedt$x & usedt$x <= upr, ]
+    output$bw.subset <- list(global = FALSE, bw = c(lwr, upr))
   } else {
-    list(
-      data = data$data,
-      bwinfo = list(
-        global = TRUE
-      )
-    )
+    output$bw.subset <- list(global = TRUE)
   }
+
+  output
+
 }

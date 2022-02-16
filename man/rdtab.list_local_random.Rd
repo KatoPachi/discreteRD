@@ -91,6 +91,6 @@ footnote <- paste0(
 )
 
 local_random_test(data = raw, bw = c(-5, 5)) \%>\%
-  tabular(ylab, digits = 2, footnote = footnote)
+  rdtab(ylab, digits = 2, footnote = footnote)
 
 }

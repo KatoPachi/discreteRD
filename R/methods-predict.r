@@ -1,6 +1,6 @@
-#' @export 
-#' 
-#' 
+#' @export
+#'
+#'
 predict.global_lm <- function(object, ...) {
   args <- list(...)
   if (is.null(args$newdata)) {
@@ -41,52 +41,50 @@ predict.global_lm <- function(object, ...) {
 #'
 #' @export
 #'
+predict.fit_wls <- function(object, ...) {
+  args <- list(...)
+
+  # new design matrix
+  if (is.null(args$newdata)) {
+    point <- object$input$local.wls$data.point
+    xmat <- matrix(c(1, point), nrow = 1)
+    colnames(xmat) <- c("(Intercept)", "x")
+
+    order <- ncol(object$input$design) - 1
+    if (order > 1) {
+      for (o in seq(2, order)) {
+        xmat <- cbind(xmat, point^o)
+        colnames(xmat)[o + 1] <- paste0("x", o)
+      }
+    }
+  } else {
+    newdt <- args$newdata
+    xmat <- as.matrix(newdt)
+  }
+
+  # prediction
+  b <- object$estimate[, 1]
+  b <- matrix(b[colnames(xmat)], ncol = 1)
+  yhat <- xmat %*% b
+
+  # output
+  out <- cbind(yhat, xmat)
+  out <- data.frame(out)
+  colnames(out) <- c("yhat", colnames(xmat))
+  out
+}
+
+#'
+#' @export
 #'
 predict.local_lm <- function (object, ...) {
   args <- list(...)
-  flag <- is.null(object$local.ate)
+  yhat1 <- do.call("predict", append(args, list(object = object$treat)))
+  colnames(yhat1)[colnames(yhat1) == "yhat"] <- "yhat1"
 
-  if (is.null(args$newdata)) {
-    if (flag) {
-      point <- object$input$local.wls$data.point
-      xmat <- matrix(c(1, point), nrow = 1)
-      colnames(xmat) <- c("(Intercept)", "x")
+  yhat0 <- do.call("predict", append(args, list(object = object$control)))
+  colnames(yhat0)[colnames(yhat0) == "yhat"] <- "yhat0"
 
-      order <- ncol(object$input$design) - 1
-      if (order > 1) {
-        for (o in seq(2, order)) {
-          xmat <- cbind(xmat, point^o)
-          colnames(xmat)[o + 1] <- paste0("x", o)
-        }
-      }
-
-      b <- object$estimate[, 1]
-      b <- matrix(b[colnames(xmat)], ncol = 1)
-      yhat <- xmat %*% b
-
-      data.frame(x = point, yhat = yhat)
-    } else {
-      predict.global_lm(object)
-    }
-  } else {
-    if (flag) {
-      newdt <- args$newdata
-      design <- as.matrix(newdt)
-
-      b <- object$estimate[, 1]
-      b <- matrix(b[colnames(design)], ncol = 1)
-      yhat <- design %*% b1
-      out <- cbind(yhat1, design)
-      out <- data.frame(out)
-      colnames(out) <- c("yhat", colnames(design))
-      out
-    } else {
-      predict.global_lm(object, args$newdata)
-    }
-  }
+  out <- cbind(yhat1 = yhat1[, "yhat1"], yhat0)
+  out
 }
-
-a <- matrix(c(1, 3), nrow = 1)
-colnames(a) <- c("a", "b")
-a <- cbind(a, 3)
-colnames(a)[3] <- "c"

@@ -73,7 +73,7 @@ rdplot.list_global_lm <- function(object,
                                   treat_label = c("treated", "control"),
                                   ate_label_size = 5,
                                   ate_label_digits = 3,
-                                  ate_label_name = "Local ATE",
+                                  ate_label_format,
                                   outcome_label,
                                   ylim,
                                   vjust = 0,
@@ -114,20 +114,15 @@ rdplot.list_global_lm <- function(object,
   })
 
   # In-plot label about result of local ATE
-  numform <- paste0("%1.", ate_label_digits, "f")
-  label1 <- paste0(ate_label_name, ": ", numform, "***(", numform, ")")
-  label2 <- paste0(ate_label_name, ": ", numform, "**(", numform, ")")
-  label3 <- paste0(ate_label_name, ": ", numform, "*(", numform, ")")
-  label4 <- paste0(ate_label_name, ": ", numform, "(", numform, ")")
+  if (missing(ate_label_format)) {
+    label <- "Local ATE: {estimate}{star}({std.error})"
+  } else {
+    label <- ate_label_format
+  }
 
   label_quo <- rlang::quo({
-    ate <- object$result[[i]]$local.ate
-    dplyr::case_when(
-      ate[, 4] <= 0.01 ~ sprintf(label1, ate[, 1], ate[, 2]),
-      ate[, 4] <= 0.05 ~ sprintf(label2, ate[, 1], ate[, 2]),
-      ate[, 4] <= 0.10 ~ sprintf(label3, ate[, 1], ate[, 2]),
-      TRUE ~ sprintf(label4, ate[, 1], ate[, 2])
-    )
+    res <- object$result[[i]]
+    label_maker(res, label, ate_label_digits)
   })
 
   # Other arguments for plot manipulation
@@ -205,7 +200,7 @@ rdplot.list_local_lm <- function(object,
                                  treat_label = c("treated", "control"),
                                  ate_label_size = 5,
                                  ate_label_digits = 3,
-                                 ate_label_name = "Local ATE",
+                                 ate_label_format,
                                  outcome_label,
                                  ylim,
                                  vjust = 0,
@@ -215,6 +210,7 @@ rdplot.list_local_lm <- function(object,
                                  patchwork = TRUE,
                                  ncol = NULL,
                                  nrow = NULL,
+                                 force = TRUE,
                                  ...) {
   # observed data aggregated by mass points
   i <- NULL
@@ -230,74 +226,32 @@ rdplot.list_local_lm <- function(object,
   })
 
   # prediction data
-  exclude <- c("weights", "kweight", "(Intercept)")
-  args <- list()
-  args$y <- rlang::quo(outcome)
-  args$global <- FALSE
-
   predict1_quo <- rlang::quo({
-    data <- recover_data(object, i)
-    data <- data[, !(names(data) %in% exclude)]
-    colnames(data)[colnames(data) == "sweight"] <- "(weights)"
-    data <- data[data$d == 1, ]
-
-    args$data <- data
-    args$se <- object$result[[i]]$treat$vcov$type
-    args$kernel <- object$result[[i]]$treat$input$local.wls$kernel
-    args$bw <- object$result[[i]]$treat$input$local.wls$bandwidth
-
-    point <- unique(c(0, data$x))
-    pred <- lapply(point, function(x) {
-      args$point <- x
-      tryCatch({
-          est <- structure(do.call("fit_wls", args), class = "local_lm")
-          predict(est)
-      }, error = function(e) {})
-    })
-    pred <- dplyr::bind_rows(pred)
-    colnames(pred)[colnames(pred) == "yhat"] <- "yhat1"
-    pred
+    fit <- fit_local_lm(
+      object$result[[i]]$treat, extend = 0, force = force
+    )
+    colnames(fit)[colnames(fit) == "yhat"] <- "yhat1"
+    fit
   })
 
   predict0_quo <- rlang::quo({
-    data <- recover_data(object, i)
-    data <- data[, !(names(data) %in% exclude)]
-    colnames(data)[colnames(data) == "sweight"] <- "(weights)"
-    data <- data[data$d == 0, ]
-
-    args$data <- data
-    args$se <- object$result[[i]]$control$vcov$type
-    args$kernel <- object$result[[i]]$control$input$local.wls$kernel
-    args$bw <- object$result[[i]]$control$input$local.wls$bandwidth
-
-    point <- unique(c(0, data$x))
-    pred <- lapply(point, function(x) {
-      args$point <- x
-      tryCatch({
-          est <- structure(do.call("fit_wls", args), class = "local_lm")
-          predict(est)
-      }, error = function(e) {})
-    })
-    pred <- dplyr::bind_rows(pred)
-    colnames(pred)[colnames(pred) == "yhat"] <- "yhat0"
-    pred
+    fit <- fit_local_lm(
+      object$result[[i]]$control, extend = 0, force = force
+    )
+    colnames(fit)[colnames(fit) == "yhat"] <- "yhat0"
+    fit
   })
 
   # In-plot label about result of local ATE
-  numform <- paste0("%1.", ate_label_digits, "f")
-  label1 <- paste0(ate_label_name, ": ", numform, "***(", numform, ")")
-  label2 <- paste0(ate_label_name, ": ", numform, "**(", numform, ")")
-  label3 <- paste0(ate_label_name, ": ", numform, "*(", numform, ")")
-  label4 <- paste0(ate_label_name, ": ", numform, "(", numform, ")")
+  if (missing(ate_label_format)) {
+    label <- "Local ATE: {estimate}{star}({std.error})"
+  } else {
+    label <- ate_label_format
+  }
 
   label_quo <- rlang::quo({
-    ate <- object$result[[i]]$local.ate
-    dplyr::case_when(
-      ate[, 4] <= 0.01 ~ sprintf(label1, ate[, 1], ate[, 2]),
-      ate[, 4] <= 0.05 ~ sprintf(label2, ate[, 1], ate[, 2]),
-      ate[, 4] <= 0.10 ~ sprintf(label3, ate[, 1], ate[, 2]),
-      TRUE ~ sprintf(label4, ate[, 1], ate[, 2])
-    )
+    res <- object$result[[i]]
+    label_maker(res, label, ate_label_digits)
   })
 
   # Other arguments for plot manipulation

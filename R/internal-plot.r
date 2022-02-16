@@ -1,3 +1,33 @@
+#' Local ATE label
+#'
+#' @param object object with "local_lm" or "global_lm" class
+#' @param label string of label format
+#' @param digits decimal place
+#'
+#' @importFrom generics tidy
+#' @importFrom dplyr case_when
+#' 
+label_maker <- function(object, label, digits = 3) {
+  decompose <- strsplit(label, "\\{|\\}")[[1]]
+  textpart <- decompose[grep("[^'']", decompose)]
+  numform <- paste0("%1.", digits, "f")
+
+  res <- generics::tidy(object)
+
+  textpart[grep("estimate", textpart)] <- sprintf(numform, res$estimate)
+  textpart[grep("std.error", textpart)] <- sprintf(numform, res$std.error)
+  textpart[grep("statistic", textpart)] <- sprintf(numform, res$statistic)
+  textpart[grep("p.value", textpart)] <- sprintf(numform, res$p.value)
+  textpart[grep("star", textpart)] <- dplyr::case_when(
+    res$p.value <= .01 ~ "***",
+    res$p.value < .05 ~ "**",
+    res$p.value < .1 ~ "*",
+    TRUE ~ ""
+  )
+
+  paste0(textpart, collapse = "")
+}
+
 #' Basic RD plot
 #'
 #' @param aggregate observed data aggregated by mass points
@@ -23,7 +53,7 @@
 #' @importFrom ggplot2 labs
 #' @importFrom ggplot2 ylim
 #'
-#' 
+#'
 gplot_internal_cutoff <- function(aggregate,
                                   predict1,
                                   predict0,

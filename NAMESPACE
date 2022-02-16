@@ -2,6 +2,7 @@
 
 S3method(glance,global_lm)
 S3method(glance,local_lm)
+S3method(predict,fit_wls)
 S3method(predict,global_lm)
 S3method(predict,local_lm)
 S3method(rdplot,list_global_lm)

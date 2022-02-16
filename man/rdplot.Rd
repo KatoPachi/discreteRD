@@ -22,6 +22,8 @@ rdplot(object, ...)
   xlab = "Running variable",
   ylab = "Average",
   patchwork = TRUE,
+  ncol = NULL,
+  nrow = NULL,
   ...
 )
 
@@ -39,6 +41,8 @@ rdplot(object, ...)
   xlab = "Running variable",
   ylab = "Average",
   patchwork = TRUE,
+  ncol = NULL,
+  nrow = NULL,
   ...
 )
 }
@@ -68,6 +72,15 @@ rdplot(object, ...)
 \item{xlab}{label of x-axis}
 
 \item{ylab}{label of y-axis}
+
+\item{patchwork}{logical.
+add a list of plots into one composition by \code{patchwork::wrap_plots}}
+
+\item{ncol}{the dimensions of the grid to create.
+argument of \code{patchwork::wrap_plots}}
+
+\item{nrow}{the dimensions of the grid to create.
+argument of \code{patchwork::wrap_plots}}
 }
 \description{
 Flexible RD Plot

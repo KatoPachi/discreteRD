@@ -52,7 +52,7 @@
 #'   discRD.assign = "smaller"
 #' )
 #'
-#' est <- global_lm(data = raw)
+#' global <- global_lm(data = raw)
 #' str(global_lm(submod = 1, data = raw))
 #' str(global_lm(submod = 1, order = 3, data = raw))
 #' str(global_lm(data = raw, cutoff = 30))

@@ -18,6 +18,12 @@ rdplot <- function(object, ...) {
 #' @param hjust numeric. Adjust in-plot text horizontally
 #' @param xlab label of x-axis
 #' @param ylab label of y-axis
+#' @param patchwork logical.
+#'   add a list of plots into one composition by `patchwork::wrap_plots`
+#' @param ncol the dimensions of the grid to create.
+#'   argument of `patchwork::wrap_plots`
+#' @param nrow the dimensions of the grid to create.
+#'   argument of `patchwork::wrap_plots`
 #' @param \dots arguments of [simplegg()]
 #'
 #' @importFrom stats setNames
@@ -75,6 +81,8 @@ rdplot.list_global_lm <- function(object,
                                   xlab = "Running variable",
                                   ylab = "Average",
                                   patchwork = TRUE,
+                                  ncol = NULL,
+                                  nrow = NULL,
                                   ...) {
   # observed data aggregated by mass points
   i <- NULL
@@ -162,7 +170,7 @@ rdplot.list_global_lm <- function(object,
   })
 
   if (patchwork) {
-    patchwork::wrap_plots(plist) +
+    patchwork::wrap_plots(plist, ncol = ncol, nrow = nrow) +
       patchwork::plot_layout(guides = "collect") &
       ggplot2::theme(legend.position = "bottom")
   } else {
@@ -205,6 +213,8 @@ rdplot.list_local_lm <- function(object,
                                  xlab = "Running variable",
                                  ylab = "Average",
                                  patchwork = TRUE,
+                                 ncol = NULL,
+                                 nrow = NULL,
                                  ...) {
   # observed data aggregated by mass points
   i <- NULL
@@ -327,7 +337,7 @@ rdplot.list_local_lm <- function(object,
   })
 
   if (patchwork) {
-    patchwork::wrap_plots(plist) +
+    patchwork::wrap_plots(plist, ncol = ncol, nrow = nrow) +
       patchwork::plot_layout(guides = "collect") &
       ggplot2::theme(legend.position = "bottom")
   } else {

@@ -37,6 +37,8 @@ gplot_internal_cutoff <- function(aggregate,
                                   xlab = "Running variable",
                                   ylab = "Average",
                                   ...) {
+  title <- if (missing(outcome_label)) NULL else outcome_label
+
   g <- ggplot2::ggplot(aggregate, ggplot2::aes(x = x, y = outcome)) +
     ggplot2::geom_point(ggplot2::aes(shape = d), size = 2) +
     ggplot2::geom_line(ggplot2::aes(x = x + cutoff, y = yhat1), predict1) +
@@ -50,7 +52,7 @@ gplot_internal_cutoff <- function(aggregate,
     ggplot2::labs(
       x = xlab,
       y = ylab,
-      title = outcome_label,
+      title = title,
       shape = NULL
     )
 
